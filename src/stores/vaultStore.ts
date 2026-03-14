@@ -8,6 +8,7 @@ interface VaultStore {
   loading: boolean;
   error: string | null;
   variables: VaultVariable[];
+  globalVariables: Record<string, VaultVariable[]>; // projectId -> variables
 
   // Actions
   checkStatus: () => Promise<void>;
@@ -16,6 +17,7 @@ interface VaultStore {
   tryAutoUnlock: () => Promise<boolean>;
   lock: () => Promise<void>;
   loadVariables: (projectId: string, envName: string) => Promise<void>;
+  loadAllGlobalVariables: (projects: any[]) => Promise<void>;
   setVariable: (
     projectId: string,
     envName: string,
@@ -47,6 +49,7 @@ export const useVaultStore = create<VaultStore>((set, get) => ({
   loading: false,
   error: null,
   variables: [],
+  globalVariables: {},
 
   checkStatus: async () => {
     try {
@@ -98,7 +101,7 @@ export const useVaultStore = create<VaultStore>((set, get) => ({
     try {
       await vault.vaultLock();
       const status = await vault.vaultStatus();
-      set({ status, variables: [] });
+      set({ status, variables: [], globalVariables: {} });
     } catch (e) {
       set({ error: String(e) });
     }
@@ -110,6 +113,29 @@ export const useVaultStore = create<VaultStore>((set, get) => ({
       set({ variables });
     } catch (e) {
       set({ error: String(e) });
+    }
+  },
+
+  loadAllGlobalVariables: async (projects) => {
+    set({ loading: true });
+    const results: Record<string, VaultVariable[]> = {};
+    try {
+      for (const project of projects) {
+        const envs = project.environments || ["default"];
+        const projectVars: VaultVariable[] = [];
+        for (const env of envs) {
+          try {
+             const vars = await vault.vaultGetVariables(project.id, env);
+             projectVars.push(...vars);
+          } catch {
+            // Skip failed environments
+          }
+        }
+        results[project.id] = projectVars;
+      }
+      set({ globalVariables: results, loading: false });
+    } catch (e) {
+      set({ error: String(e), loading: false });
     }
   },
 

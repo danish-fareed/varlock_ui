@@ -9,6 +9,7 @@ import type {
 } from "@/lib/types";
 import { getEnvValue, getSourceFileName, upsertEnvValue } from "@/lib/envFile";
 import { updateSchemaEntry, serializeSchemaEntry } from "@/lib/schemaParser";
+import { isSensitiveKey } from "@/lib/utils";
 
 // ── Types ──
 
@@ -342,6 +343,11 @@ export function VariableDetailDrawer({
             >
               {variable.valid ? "valid" : "needs attention"}
             </span>
+            {!variable.sensitive && isSensitiveKey(variable.key) && (
+              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-accent-light text-accent animate-pulse-soft">
+                Highly recommended for Vault
+              </span>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3 text-sm mt-3">

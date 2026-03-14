@@ -62,10 +62,13 @@ export function Sidebar() {
           {navItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => setView(item.id)}
+              onClick={() => {
+                setView(item.id);
+                if (item.id === "dashboard") useProjectStore.getState().setActiveProject(null);
+              }}
               title={item.label}
               className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer border-none ${
-                view === item.id
+                view === item.id && !useProjectStore.getState().activeProject
                   ? "bg-accent text-white shadow-sm"
                   : "bg-transparent text-text-secondary hover:bg-sidebar-hover hover:text-text"
               }`}
@@ -137,9 +140,12 @@ export function Sidebar() {
           {navItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => setView(item.id)}
+              onClick={() => {
+                setView(item.id);
+                if (item.id === "dashboard") useProjectStore.getState().setActiveProject(null);
+              }}
               className={`flex items-center gap-2.5 px-2.5 py-[7px] rounded-lg cursor-pointer transition-all border-none w-full text-left ${
-                view === item.id
+                view === item.id && (item.id !== 'dashboard' || !useProjectStore.getState().activeProject)
                   ? "bg-accent text-white shadow-[0_1px_3px_rgba(10,132,255,0.25)]"
                   : "bg-transparent text-text-secondary hover:bg-sidebar-hover hover:text-text"
               }`}

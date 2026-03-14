@@ -2,11 +2,15 @@ import { create } from "zustand";
 import type { Project, AppView } from "@/lib/types";
 import * as commands from "@/lib/commands";
 
+const PINNED_STORAGE_KEY = "varlock_pinned_projects";
+
 interface ProjectState {
   /** All managed projects */
   projects: Project[];
   /** Currently selected project */
   activeProject: Project | null;
+  /** Pinned project IDs for sidebar */
+  pinnedProjectIds: string[];
   /** Current view mode */
   view: AppView;
   /** Loading state */
@@ -16,17 +20,27 @@ interface ProjectState {
 
   // Actions
   loadProjects: () => Promise<void>;
-  setActiveProject: (project: Project) => void;
+  setActiveProject: (project: Project | null) => void;
   addProject: (path: string) => Promise<Project>;
   removeProject: (id: string) => Promise<void>;
   refreshActiveProject: () => Promise<void>;
-  setView: (view: string) => void;
+  setView: (view: AppView | string) => void;
   clearError: () => void;
+  pinProject: (projectId: string) => void;
+  unpinProject: (projectId: string) => void;
+  reorderPinnedProjects: (projectIds: string[]) => void;
 }
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
   projects: [],
   activeProject: null,
+  pinnedProjectIds: (() => {
+    try {
+      return JSON.parse(localStorage.getItem(PINNED_STORAGE_KEY) || "[]");
+    } catch {
+      return [];
+    }
+  })(),
   view: "dashboard",
   isLoading: false,
   error: null,
@@ -50,7 +64,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   setActiveProject: (project) => {
-    set({ activeProject: project });
+    set({ activeProject: project, view: "dashboard" });
   },
 
   addProject: async (path) => {
@@ -102,5 +116,25 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       (view as AppView);
     set({ view: sanitized });
   },
+
+  pinProject: (projectId) => {
+    const current = get().pinnedProjectIds;
+    if (current.includes(projectId)) return;
+    const next = [...current, projectId];
+    localStorage.setItem(PINNED_STORAGE_KEY, JSON.stringify(next));
+    set({ pinnedProjectIds: next });
+  },
+
+  unpinProject: (projectId) => {
+    const next = get().pinnedProjectIds.filter((id) => id !== projectId);
+    localStorage.setItem(PINNED_STORAGE_KEY, JSON.stringify(next));
+    set({ pinnedProjectIds: next });
+  },
+
+  reorderPinnedProjects: (projectIds) => {
+    localStorage.setItem(PINNED_STORAGE_KEY, JSON.stringify(projectIds));
+    set({ pinnedProjectIds: projectIds });
+  },
+
   clearError: () => set({ error: null }),
 }));

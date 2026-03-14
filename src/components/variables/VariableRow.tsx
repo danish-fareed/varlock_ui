@@ -5,6 +5,7 @@ import { useVaultStore } from "@/stores/vaultStore";
 import { useProjectStore } from "@/stores/projectStore";
 import { useEnvironmentStore } from "@/stores/environmentStore";
 import { readEnvFile, writeEnvFile } from "@/lib/commands";
+import { isSensitiveKey } from "@/lib/utils";
 
 interface VariableRowProps {
   variable: MergedVariable;
@@ -23,8 +24,8 @@ export function VariableRow({ variable, onSelect }: VariableRowProps) {
   const activeProject = useProjectStore((s) => s.activeProject);
   const setVariable = useVaultStore((s) => s.setVariable);
 
-  // Example store check - in a real app this would check if the variable exists in the vault
-  const [isStoreMode, setIsStoreMode] = useState(false);
+  // Intelligent recommendation
+  const isRecommended = !variable.sensitive && isSensitiveKey(variable.key);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -127,7 +128,7 @@ export function VariableRow({ variable, onSelect }: VariableRowProps) {
       >
         {/* Key */}
         <div className="font-mono text-[12px] font-medium text-text truncate flex items-center gap-1.5">
-          {isStoreMode && (
+          {variable.sensitive && (
             <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="text-accent shrink-0">
               <path d="M7 1L2 3.5v4C2 10.5 7 13 7 13s5-2.5 5-5.5v-4L7 1z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
             </svg>
@@ -154,6 +155,14 @@ export function VariableRow({ variable, onSelect }: VariableRowProps) {
               title="Type inferred — not confirmed in .env.schema"
             >
               *
+            </span>
+          )}
+          {isRecommended && (
+            <span
+              className="text-[10px] font-medium px-1.5 py-[2px] rounded-md bg-accent-light/50 text-accent animate-pulse-soft"
+              title="This variable looks sensitive. Recommended for Vault."
+            >
+              Recommended
             </span>
           )}
         </div>
@@ -192,7 +201,22 @@ export function VariableRow({ variable, onSelect }: VariableRowProps) {
           className="absolute right-4 top-[calc(100%-8px)] z-10 w-40 bg-surface rounded-lg shadow-[0_4px_24px_rgba(0,0,0,0.1),0_0_0_1px_rgba(0,0,0,0.05)] py-1 animate-scale-in origin-top-right"
           onClick={(e) => e.stopPropagation()}
         >
-          {!isStoreMode ? (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowMenu(false);
+              if (variable.value) navigator.clipboard.writeText(variable.value);
+            }}
+            className="w-full text-left px-3 py-1.5 text-[12px] text-text hover:bg-accent hover:text-white cursor-pointer border-none bg-transparent flex items-center gap-2"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+            </svg>
+            Copy Value
+          </button>
+
+          {!variable.sensitive ? (
             <button
               onClick={handleStoreInVault}
               className="w-full text-left px-3 py-1.5 text-[12px] text-text hover:bg-accent hover:text-white cursor-pointer border-none bg-transparent flex items-center gap-2"
@@ -204,7 +228,7 @@ export function VariableRow({ variable, onSelect }: VariableRowProps) {
             </button>
           ) : (
              <button
-              onClick={(e) => { e.stopPropagation(); setIsStoreMode(false); setShowMenu(false); }}
+              onClick={(e) => { e.stopPropagation(); setShowMenu(false); }}
               className="w-full text-left px-3 py-1.5 text-[12px] text-text hover:bg-danger hover:text-white cursor-pointer border-none bg-transparent flex items-center gap-2"
             >
               <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="opacity-70">

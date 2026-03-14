@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
 import { useSettingsStore } from "@/stores/settingsStore";
+import { useVaultStore } from "@/stores/vaultStore";
 import { createPortal } from "react-dom";
 
 interface SettingsModalProps {
   onClose: () => void;
 }
 
+type SettingsTab = "general" | "vault" | "security" | "integrations" | "account";
+
 /**
- * macOS System Preferences-style settings modal.
- * Sections: Appearance, Terminal.
+ * Redesigned settings modal with organized categories and Vault integration.
  */
 export function SettingsModal({ onClose }: SettingsModalProps) {
   const {
@@ -20,7 +22,9 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
     setTerminalScrollback,
   } = useSettingsStore();
 
-  const [activeTab, setActiveTab] = useState<"appearance" | "terminal" | "about">("appearance");
+  const { status, unlock, lock, loading, error } = useVaultStore();
+  const [activeTab, setActiveTab] = useState<SettingsTab>("general");
+  const [password, setPassword] = useState("");
 
   // Close on Escape
   useEffect(() => {
@@ -31,141 +35,168 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
+  const handleUnlock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await unlock(password);
+      setPassword("");
+    } catch {
+      // Error handled by store
+    }
+  };
+
   const modalContent = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]"
       role="dialog"
       aria-modal="true"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-surface rounded-xl shadow-[0_24px_80px_rgba(0,0,0,0.12),0_0_0_1px_rgba(0,0,0,0.06)] w-full max-w-[600px] h-[450px] mx-4 animate-scale-in flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="px-5 py-3 border-b border-border-light flex items-center justify-between bg-surface shrink-0">
-          <div className="flex gap-1 bg-surface-secondary p-1 rounded-lg">
-            <TabButton
-              active={activeTab === "appearance"}
-              onClick={() => setActiveTab("appearance")}
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <circle cx="7" cy="7" r="3" stroke="currentColor" strokeWidth="1.2" />
-                <path d="M7 1v1M7 12v1M1 7h1M12 7h1M2.8 2.8l.7.7M10.5 10.5l.7.7M2.8 11.2l.7-.7M10.5 3.5l.7-.7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-              </svg>
-              Appearance
-            </TabButton>
-            <TabButton
-              active={activeTab === "terminal"}
-              onClick={() => setActiveTab("terminal")}
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M2 4l4 3-4 3M7 10h5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              Terminal
-            </TabButton>
-            <TabButton
-              active={activeTab === "about"}
-              onClick={() => setActiveTab("about")}
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.2" />
-                <path d="M7 6v4M7 4h.01" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-              </svg>
-              About
-            </TabButton>
+      <div className="bg-surface rounded-2xl shadow-[0_24px_80px_rgba(0,0,0,0.2),0_0_0_1px_rgba(0,0,0,0.08)] w-full max-w-[700px] h-[500px] mx-4 animate-scale-in flex overflow-hidden">
+        {/* Sidebar Navigation */}
+        <div className="w-[200px] bg-surface-secondary border-r border-border-light flex flex-col py-4 px-2 shrink-0">
+          <div className="px-3 mb-4">
+            <h2 className="text-[11px] font-bold text-text-muted uppercase tracking-wider">Settings</h2>
           </div>
-          <button
-            onClick={onClose}
-            className="w-6 h-6 rounded-md flex items-center justify-center text-text-muted hover:text-text hover:bg-surface-tertiary transition-colors cursor-pointer border-none bg-transparent shrink-0"
-          >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          </button>
+          <div className="space-y-0.5">
+            <TabItem active={activeTab === "general"} onClick={() => setActiveTab("general")} icon="general">General</TabItem>
+            <TabItem active={activeTab === "vault"} onClick={() => setActiveTab("vault")} icon="vault">Vault</TabItem>
+            <TabItem active={activeTab === "security"} onClick={() => setActiveTab("security")} icon="security">Security</TabItem>
+            <TabItem active={activeTab === "integrations"} onClick={() => setActiveTab("integrations")} icon="integrations">Integrations</TabItem>
+            <TabItem active={activeTab === "account"} onClick={() => setActiveTab("account")} icon="account">Account</TabItem>
+          </div>
         </div>
 
-        {/* Content area */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {activeTab === "appearance" && (
-            <div className="flex flex-col gap-2 max-w-sm mx-auto">
-              <label className="text-[13px] font-medium text-text mt-2 mb-2">Theme Preference</label>
-              <div className="flex gap-3">
-                <ThemeCard label="Light" active={theme === "light"} onClick={() => setTheme("light")}>
-                  <LightThemePreview />
-                </ThemeCard>
-                <ThemeCard label="Dark" active={theme === "dark"} onClick={() => setTheme("dark")}>
-                  <DarkThemePreview />
-                </ThemeCard>
-                <ThemeCard label="System" active={theme === "system"} onClick={() => setTheme("system")}>
-                  <SystemThemePreview />
-                </ThemeCard>
-              </div>
-            </div>
-          )}
+        {/* Content Area */}
+        <div className="flex-1 flex flex-col bg-surface min-w-0">
+          <div className="px-8 pt-6 pb-4 flex items-center justify-between shrink-0">
+            <h1 className="text-lg font-bold text-text capitalize">{activeTab}</h1>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg hover:bg-surface-secondary text-text-muted hover:text-text transition-colors cursor-pointer border-none bg-transparent"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
 
-          {activeTab === "terminal" && (
-            <div className="flex flex-col gap-6 max-w-sm mx-auto mt-2">
-              <div className="flex items-center justify-between">
+          <div className="flex-1 overflow-y-auto px-8 pb-8 custom-scrollbar">
+            {activeTab === "general" && (
+              <div className="space-y-8 animate-fade-in">
+                <section>
+                  <label className="text-[13px] font-semibold text-text mb-4 block">Appearance</label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <ThemeCard label="Light" active={theme === "light"} onClick={() => setTheme("light")}>
+                      <LightThemePreview />
+                    </ThemeCard>
+                    <ThemeCard label="Dark" active={theme === "dark"} onClick={() => setTheme("dark")}>
+                      <DarkThemePreview />
+                    </ThemeCard>
+                    <ThemeCard label="System" active={theme === "system"} onClick={() => setTheme("system")}>
+                      <SystemThemePreview />
+                    </ThemeCard>
+                  </div>
+                </section>
+
+                <div className="h-px bg-border-light" />
+
+                <section className="space-y-4">
+                  <label className="text-[13px] font-semibold text-text block">Terminal Preferences</label>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[13px] text-text font-medium">Font size</p>
+                      <p className="text-[11px] text-text-muted">Adjust the console text size.</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                       <button onClick={() => setTerminalFontSize(Math.max(10, terminalFontSize - 1))} className="w-8 h-8 rounded-lg border border-border-light bg-surface hover:bg-surface-secondary flex items-center justify-center">-</button>
+                       <span className="text-[13px] font-mono text-text w-6 text-center">{terminalFontSize}</span>
+                       <button onClick={() => setTerminalFontSize(Math.min(24, terminalFontSize + 1))} className="w-8 h-8 rounded-lg border border-border-light bg-surface hover:bg-surface-secondary flex items-center justify-center">+</button>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[13px] text-text font-medium">Scrollback</p>
+                      <p className="text-[11px] text-text-muted">Lines kept in history.</p>
+                    </div>
+                    <select
+                      value={terminalScrollback}
+                      onChange={(e) => setTerminalScrollback(Number(e.target.value))}
+                      className="h-8 px-2 rounded-lg border border-border-light bg-surface text-text text-[13px] outline-none"
+                    >
+                      <option value={1000}>1,000 lines</option>
+                      <option value={5000}>5,000 lines</option>
+                      <option value={10000}>10,000 lines</option>
+                    </select>
+                  </div>
+                </section>
+              </div>
+            )}
+
+            {activeTab === "vault" && (
+              <div className="space-y-6 animate-fade-in">
+                <div className="bg-surface-secondary rounded-2xl p-5 border border-border-light">
+                   <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${status?.unlocked ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>
+                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[13px] font-bold text-text"> {status?.unlocked ? "Vault is Unlocked" : "Vault is Locked"}</p>
+                      <p className="text-[11px] text-text-muted">Protecting secrets with XChaCha20-Poly1305.</p>
+                    </div>
+                    {status?.unlocked && (
+                      <button onClick={lock} className="px-3 py-1.5 rounded-lg bg-surface border border-border-light text-[12px] font-semibold hover:bg-surface-tertiary transition-colors">Lock Now</button>
+                    )}
+                   </div>
+                </div>
+
+                {!status?.unlocked && (
+                  <form onSubmit={handleUnlock} className="space-y-4 pt-4">
+                    <div>
+                      <label className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2 block">Master Password</label>
+                      <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Enter vault password..."
+                        className="w-full h-10 px-4 rounded-xl border border-border bg-surface-secondary text-[13px] focus:border-accent outline-none transition-all"
+                        disabled={loading}
+                      />
+                    </div>
+                    {error && <p className="text-[11px] text-danger font-medium">{error}</p>}
+                    <button
+                      type="submit"
+                      disabled={loading || !password}
+                      className="w-full h-10 rounded-xl bg-accent text-white text-[13px] font-bold hover:bg-accent-dark disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                    >
+                      {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Unlock Vault"}
+                    </button>
+                  </form>
+                )}
+
+                <div className="pt-4 space-y-4">
+                   <label className="text-[11px] font-bold text-text-muted uppercase tracking-wider block">Advanced</label>
+                   <div className="flex items-center justify-between">
+                     <div>
+                       <p className="text-[13px] text-text font-medium">Reset Keychain</p>
+                       <p className="text-[11px] text-text-muted">Forget this device and reset auto-unlock.</p>
+                     </div>
+                     <button className="px-3 py-1.5 rounded-lg border border-danger/20 text-danger text-[12px] font-semibold hover:bg-danger/5">Reset</button>
+                   </div>
+                </div>
+              </div>
+            )}
+
+            {(activeTab === "security" || activeTab === "integrations" || activeTab === "account") && (
+              <div className="flex flex-col items-center justify-center h-full text-center space-y-4 animate-fade-in">
+                <div className="w-16 h-16 rounded-3xl bg-surface-secondary flex items-center justify-center text-text-muted">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 2v20M2 12h20"/></svg>
+                </div>
                 <div>
-                  <label className="text-[13px] font-medium text-text">Font size</label>
-                  <p className="text-[12px] text-text-muted mt-0.5">Terminal text size in pixels.</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setTerminalFontSize(Math.max(10, terminalFontSize - 1))}
-                    className="w-7 h-7 rounded-lg border border-border bg-surface text-text-secondary hover:bg-surface-secondary hover:text-text flex items-center justify-center cursor-pointer"
-                  >
-                    -
-                  </button>
-                  <span className="text-[13px] font-mono text-text w-6 text-center tabular-nums">
-                    {terminalFontSize}
-                  </span>
-                  <button
-                    onClick={() => setTerminalFontSize(Math.min(24, terminalFontSize + 1))}
-                    className="w-7 h-7 rounded-lg border border-border bg-surface text-text-secondary hover:bg-surface-secondary hover:text-text flex items-center justify-center cursor-pointer"
-                  >
-                    +
-                  </button>
+                  <h3 className="text-[15px] font-bold text-text">Coming Soon</h3>
+                  <p className="text-[13px] text-text-muted mt-1 max-w-[240px]">This section is under active development and will be available in a future update.</p>
                 </div>
               </div>
-
-              <div className="h-px bg-border-light" />
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="text-[13px] font-medium text-text">Scrollback</label>
-                  <p className="text-[12px] text-text-muted mt-0.5">History length limit.</p>
-                </div>
-                <select
-                  value={terminalScrollback}
-                  onChange={(e) => setTerminalScrollback(Number(e.target.value))}
-                  className="h-8 px-2 rounded-lg border border-border bg-surface text-text text-[13px] cursor-pointer"
-                >
-                  <option value={1000}>1,000</option>
-                  <option value={5000}>5,000</option>
-                  <option value={10000}>10,000</option>
-                  <option value={50000}>50,000</option>
-                </select>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "about" && (
-            <div className="flex flex-col gap-4 max-w-sm mx-auto mt-6">
-              <div className="flex items-center justify-between">
-                <span className="text-[13px] text-text-secondary">Application</span>
-                <span className="text-[13px] font-medium text-text">Varlock UI</span>
-              </div>
-              <div className="h-px bg-border-light" />
-              <div className="flex items-center justify-between">
-                <span className="text-[13px] text-text-secondary">Runtime</span>
-                <span className="text-[13px] font-medium text-text">Tauri 2</span>
-              </div>
-              <div className="h-px bg-border-light" />
-              <div className="flex items-center justify-between">
-                <span className="text-[13px] text-text-secondary">Framework</span>
-                <span className="text-[13px] font-medium text-text">React 19</span>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -174,14 +205,28 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   return createPortal(modalContent, document.body);
 }
 
-function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function TabItem({ active, onClick, icon, children }: { active: boolean; onClick: () => void; icon: string; children: React.ReactNode }) {
+  const getIcon = () => {
+    switch (icon) {
+      case "general": return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1v22M1 12h22M2.8 2.8l16.4 16.4M2.8 21.2l16.4-16.4"/></svg>;
+      case "vault": return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>;
+      case "security": return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>;
+      case "integrations": return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>;
+      case "account": return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
+      default: return null;
+    }
+  };
+
   return (
     <button
       onClick={onClick}
-      className={`px-3 py-1.5 rounded-md text-[12px] font-medium flex items-center gap-1.5 transition-colors cursor-pointer border-none ${
-        active ? "bg-surface shadow-sm text-text" : "bg-transparent text-text-muted hover:text-text"
+      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all cursor-pointer border-none ${
+        active 
+          ? "bg-accent text-white shadow-md shadow-accent/20" 
+          : "bg-transparent text-text-muted hover:bg-surface-tertiary hover:text-text"
       }`}
     >
+      <span className={active ? "text-white" : "text-text-secondary"}>{getIcon()}</span>
       {children}
     </button>
   );
@@ -191,16 +236,16 @@ function ThemeCard({ label, active, onClick, children }: { label: string; active
   return (
     <button
       onClick={onClick}
-      className={`flex-1 rounded-xl border-2 p-2.5 transition-all cursor-pointer ${
-        active ? "border-accent bg-accent-light/30 shadow-[0_0_0_1px_rgba(10,132,255,0.15)]" : "border-border-light bg-surface hover:border-border"
+      className={`flex-1 rounded-2xl border-2 p-3 transition-all cursor-pointer group ${
+        active ? "border-accent bg-accent/5" : "border-border-light bg-surface hover:border-border"
       }`}
     >
-      <div className="rounded-lg overflow-hidden mb-2.5 border border-border-light/50">{children}</div>
-      <div className="flex items-center justify-center gap-1.5">
-        <div className={`w-3 h-3 rounded-full border-[1.5px] flex items-center justify-center shrink-0 ${active ? "border-accent" : "border-border"}`}>
+      <div className="rounded-xl overflow-hidden mb-3 border border-border-light shadow-sm">{children}</div>
+      <div className="flex items-center justify-center gap-2">
+        <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${active ? "border-accent" : "border-border"}`}>
           {active && <div className="w-1.5 h-1.5 rounded-full bg-accent" />}
         </div>
-        <span className="text-[12px] font-medium text-text">{label}</span>
+        <span className={`text-[12px] font-bold ${active ? "text-accent" : "text-text-muted group-hover:text-text"}`}>{label}</span>
       </div>
     </button>
   );
@@ -208,30 +253,18 @@ function ThemeCard({ label, active, onClick, children }: { label: string; active
 
 function LightThemePreview() {
   return (
-    <div className="h-16 bg-[#F5F5F7] flex">
-      <div className="w-8 bg-[#F0F0F2] border-r border-[#E8E8ED]">
-        <div className="mt-2 mx-1 h-1.5 rounded bg-[#0A84FF]" />
-        <div className="mt-1 mx-1 h-1.5 rounded bg-[#D2D2D7]" />
-      </div>
-      <div className="flex-1 p-1.5">
-        <div className="h-2 w-10 rounded bg-[#D2D2D7] mb-1" />
-        <div className="h-1.5 w-12 rounded bg-[#E8E8ED]" />
-      </div>
+    <div className="h-16 bg-[#F5F5F7] flex p-1 gap-1">
+      <div className="w-8 bg-white rounded-lg shadow-sm" />
+      <div className="flex-1 bg-white rounded-lg shadow-sm" />
     </div>
   );
 }
 
 function DarkThemePreview() {
   return (
-    <div className="h-16 bg-[#2C2C2E] flex">
-      <div className="w-8 bg-[#1C1C1E] border-r border-[#38383A]">
-        <div className="mt-2 mx-1 h-1.5 rounded bg-[#0A84FF]" />
-        <div className="mt-1 mx-1 h-1.5 rounded bg-[#48484A]" />
-      </div>
-      <div className="flex-1 p-1.5">
-        <div className="h-2 w-10 rounded bg-[#48484A] mb-1" />
-        <div className="h-1.5 w-12 rounded bg-[#38383A]" />
-      </div>
+    <div className="h-16 bg-[#1C1C1E] flex p-1 gap-1">
+      <div className="w-8 bg-[#2C2C2E] rounded-lg border border-white/5" />
+      <div className="flex-1 bg-[#2C2C2E] rounded-lg border border-white/5" />
     </div>
   );
 }
@@ -240,7 +273,7 @@ function SystemThemePreview() {
   return (
     <div className="h-16 flex overflow-hidden">
       <div className="flex-1 bg-[#F5F5F7]" />
-      <div className="flex-1 bg-[#2C2C2E]" />
+      <div className="flex-1 bg-[#1C1C1E]" />
     </div>
   );
 }
