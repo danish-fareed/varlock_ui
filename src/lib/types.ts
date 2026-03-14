@@ -19,6 +19,11 @@ export interface VarlockVariable {
   errors: string[];
 }
 
+export interface EditableProjectFile {
+  relativePath: string;
+  exists: boolean;
+}
+
 export interface VarlockScanResult {
   clean: boolean;
   leakCount: number;
@@ -77,3 +82,175 @@ export interface TerminalSession {
 // ── UI view state ──
 
 export type AppView = "dashboard" | "terminal";
+
+// ── Schema editing types ──
+
+/** Supported variable types for .env.schema decorators */
+export type SchemaVarType =
+  | "string"
+  | "url"
+  | "port"
+  | "number"
+  | "boolean"
+  | "enum"
+  | "email"
+  | "path";
+
+/** A single decorator parsed from .env.schema comments */
+export interface SchemaDecorator {
+  name: string;
+  value: string | null;
+}
+
+/** Parsed entry from .env.schema file */
+export interface SchemaEntry {
+  key: string;
+  /** The base/default value in .env.schema */
+  baseValue: string;
+  /** Parsed decorator metadata */
+  type: SchemaVarType;
+  required: boolean;
+  sensitive: boolean;
+  description: string;
+  enumValues: string[];
+  /** All raw decorators from the comment block */
+  decorators: SchemaDecorator[];
+  /** Line range in the schema file (1-indexed) */
+  lineStart: number;
+  lineEnd: number;
+}
+
+/** Whether metadata was confirmed from schema or inferred by heuristic */
+export type MetadataSource = "schema" | "inferred";
+
+/** Value state for a variable in a specific env file */
+export interface FileValue {
+  relativePath: string;
+  value: string | null;
+  exists: boolean;
+}
+
+/** Rich variable model combining CLI output, schema metadata, and per-file values */
+export interface EditableVariable {
+  key: string;
+  /** Resolved runtime value from varlock load */
+  resolvedValue: string | null;
+  /** Source file that provided the resolved value */
+  resolvedSource: string | null;
+  /** Schema entry if parsed from .env.schema */
+  schema: SchemaEntry | null;
+  /** Per-file values loaded from .env.* files */
+  fileValues: FileValue[];
+  /** Metadata with source tracking */
+  type: SchemaVarType;
+  typeSource: MetadataSource;
+  required: boolean;
+  requiredSource: MetadataSource;
+  sensitive: boolean;
+  sensitiveSource: MetadataSource;
+  description: string;
+  /** Validation state */
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+// ── Merged load result (from Rust schema parser + CLI output) ──
+
+/** A variable with merged metadata from both CLI output and Rust schema parsing. */
+export interface MergedVariable {
+  key: string;
+  /** Resolved runtime value from varlock load */
+  value: string | null;
+  /** Source file that provided the resolved value */
+  source: string | null;
+  /** Variable type (from schema if available, otherwise inferred) */
+  type: string;
+  /** Where the type came from: "schema" or "inferred" */
+  typeSource: MetadataSource;
+  required: boolean;
+  requiredSource: MetadataSource;
+  sensitive: boolean;
+  sensitiveSource: MetadataSource;
+  description: string;
+  /** Enum values if type is enum */
+  enumValues: string[];
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  /** Whether a schema entry exists for this variable */
+  hasSchema: boolean;
+  /** The base value from the schema (if present) */
+  schemaBaseValue: string | null;
+  /** Line range in schema file (if present) */
+  schemaLineStart: number | null;
+  schemaLineEnd: number | null;
+}
+
+/** The full merged result returned from the Rust backend. */
+export interface MergedLoadResult {
+  env: string;
+  valid: boolean;
+  errorCount: number;
+  warningCount: number;
+  variables: MergedVariable[];
+  /** Warnings from schema parsing (if any) */
+  schemaWarnings: string[];
+  /** Whether a .env.schema file was found and parsed */
+  schemaParsed: boolean;
+}
+
+// ── Saved run configuration ──
+
+export interface SavedRunConfig {
+  id: string;
+  label: string;
+  command: string;
+  env: string | null;
+  lastUsed: number;
+}
+
+// ── Migration types ──
+
+export type MigrationFileRole =
+  | "schema-seed"
+  | "shared-defaults"
+  | "local-overrides"
+  | "environment"
+  | "schema"
+  | "unknown";
+
+export interface DetectedEnvFile {
+  relativePath: string;
+  role: MigrationFileRole;
+  variableCount: number;
+  sensitiveKeyCount: number;
+  exists: boolean;
+}
+
+export interface MigrationVariable {
+  key: string;
+  value: string;
+  inferredType: SchemaVarType;
+  inferredSensitive: boolean;
+  sourceFile: string;
+  /** Decorators that will be generated */
+  decorators: string[];
+}
+
+export interface MigrationPlan {
+  detectedFiles: DetectedEnvFile[];
+  variables: MigrationVariable[];
+  schemaPreview: string;
+  conflicts: string[];
+  backupPaths: string[];
+  hasExistingSchema: boolean;
+}
+
+export interface MigrationApplyResult {
+  schemaPath: string;
+  backupsCreated: string[];
+  filesWritten: string[];
+  success: boolean;
+  message: string;
+}

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { VarlockLoadResult, VarlockVariable } from "@/lib/types";
+import type { MergedLoadResult, MergedVariable } from "@/lib/types";
 import * as commands from "@/lib/commands";
 
 type VariableFilter = "all" | "secrets" | "errors" | "required";
@@ -9,8 +9,8 @@ let loadRequestCounter = 0;
 interface EnvironmentState {
   /** Current environment name */
   activeEnv: string;
-  /** Latest varlock load result */
-  loadResult: VarlockLoadResult | null;
+  /** Latest merged load result (CLI output + schema metadata) */
+  loadResult: MergedLoadResult | null;
   /** Loading state for varlock load */
   isLoading: boolean;
   /** Error from varlock load */
@@ -25,7 +25,7 @@ interface EnvironmentState {
   clearError: () => void;
 
   // Computed-like getters
-  getFilteredVariables: () => VarlockVariable[];
+  getFilteredVariables: () => MergedVariable[];
 }
 
 export const useEnvironmentStore = create<EnvironmentState>((set, get) => ({
@@ -44,7 +44,7 @@ export const useEnvironmentStore = create<EnvironmentState>((set, get) => ({
     const requestId = ++loadRequestCounter;
     set({ isLoading: true, error: null });
     try {
-      const result = await commands.varlockLoad(cwd, envName);
+      const result = await commands.varlockLoadMerged(cwd, envName);
       if (requestId !== loadRequestCounter) {
         return;
       }

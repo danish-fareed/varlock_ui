@@ -1,5 +1,9 @@
 import { invoke, Channel } from "@tauri-apps/api/core";
 import type {
+  EditableProjectFile,
+  MergedLoadResult,
+  MigrationApplyResult,
+  MigrationPlan,
   VarlockLoadResult,
   VarlockScanResult,
   VarlockStatus,
@@ -24,12 +28,37 @@ export async function varlockLoad(
   return invoke<VarlockLoadResult>("varlock_load", { cwd, env });
 }
 
+export async function varlockLoadMerged(
+  cwd: string,
+  env?: string,
+): Promise<MergedLoadResult> {
+  return invoke<MergedLoadResult>("varlock_load_merged", { cwd, env });
+}
+
 export async function varlockInit(cwd: string): Promise<void> {
   return invoke<void>("varlock_init", { cwd });
 }
 
 export async function varlockScan(cwd: string): Promise<VarlockScanResult> {
   return invoke<VarlockScanResult>("varlock_scan", { cwd });
+}
+
+// ── Migration ──
+
+export async function migrationPlan(cwd: string): Promise<MigrationPlan> {
+  return invoke<MigrationPlan>("migration_plan", { cwd });
+}
+
+export async function migrationApply(
+  cwd: string,
+  schemaContent: string,
+  createBackups: boolean,
+): Promise<MigrationApplyResult> {
+  return invoke<MigrationApplyResult>("migration_apply", {
+    cwd,
+    schemaContent,
+    createBackups,
+  });
 }
 
 // ── Process management ──
@@ -87,6 +116,27 @@ export async function writeEnvFile(
 
 export async function listEnvFiles(cwd: string): Promise<string[]> {
   return invoke<string[]>("list_env_files", { cwd });
+}
+
+export async function listEditableProjectFiles(
+  cwd: string,
+): Promise<EditableProjectFile[]> {
+  return invoke<EditableProjectFile[]>("list_editable_project_files", { cwd });
+}
+
+export async function readProjectFile(
+  cwd: string,
+  relativePath: string,
+): Promise<string> {
+  return invoke<string>("read_project_file", { cwd, relativePath });
+}
+
+export async function writeProjectFile(
+  cwd: string,
+  relativePath: string,
+  content: string,
+): Promise<void> {
+  return invoke<void>("write_project_file", { cwd, relativePath, content });
 }
 
 export async function watchProject(

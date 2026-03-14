@@ -103,12 +103,21 @@ varlock_ui/
 │           ├── app_state.rs        # Projects list, settings
 │           └── process_state.rs    # Running process handles (for kill)
 │
-└── design/                         # Existing HTML mockups
-    ├── varlock_gui_main_view.html
-    ├── varlock_terminal_panel.html
-    ├── varlock_add_project_migrate.html
-    ├── varlock_interface_contract.html
-    └── varlock_ui_separation_architecture.html
+├── docs/
+│   ├── architecture/
+│   │   ├── ARCHITECTURE.md
+│   │   ├── varlock_interface_contract.html
+│   │   └── varlock_ui_separation_architecture.html
+│   ├── design/
+│   │   ├── varlock_gui_main_view.html
+│   │   ├── varlock_terminal_panel.html
+│   │   └── varlock_add_project_migrate.html
+│   ├── plans/
+│   │   └── IMPLEMENTATION_PLAN_REMAINING.md
+│   └── notes/
+│       ├── design.md
+│       └── working.md
+└── README.md                       # Project readme (to be added)
 ```
 
 ---

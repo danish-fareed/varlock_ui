@@ -1,7 +1,5 @@
 use std::path::Path;
 use std::time::Duration;
-#[cfg(target_os = "windows")]
-use std::os::windows::process::CommandExt;
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 

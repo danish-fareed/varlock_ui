@@ -32,6 +32,7 @@ impl ProcessState {
     }
 
     /// Remove and return a process by ID (for cleanup after exit).
+    #[allow(dead_code)]
     pub fn remove(&self, id: &str) -> Option<Child> {
         self.lock().remove(id)
     }

@@ -1,6 +1,63 @@
 import { create } from "zustand";
-import type { TerminalSession, ProcessEvent } from "@/lib/types";
+import type { TerminalSession, ProcessEvent, SavedRunConfig } from "@/lib/types";
 import * as commands from "@/lib/commands";
+
+// ── Persistence helpers ──
+
+const SAVED_RUNS_KEY = "varlock_saved_runs";
+
+function loadSavedRuns(): SavedRunConfig[] {
+  try {
+    const raw = localStorage.getItem(SAVED_RUNS_KEY);
+    return raw ? JSON.parse(raw) : getDefaultSavedRuns();
+  } catch {
+    return getDefaultSavedRuns();
+  }
+}
+
+function persistSavedRuns(runs: SavedRunConfig[]) {
+  try {
+    localStorage.setItem(SAVED_RUNS_KEY, JSON.stringify(runs));
+  } catch {
+    // storage may be unavailable
+  }
+}
+
+function getDefaultSavedRuns(): SavedRunConfig[] {
+  return [
+    {
+      id: "default-dev",
+      label: "Dev server",
+      command: "npm run dev",
+      env: null,
+      lastUsed: 0,
+    },
+    {
+      id: "default-test",
+      label: "Tests",
+      command: "npm test",
+      env: null,
+      lastUsed: 0,
+    },
+    {
+      id: "default-build",
+      label: "Build",
+      command: "npm run build",
+      env: null,
+      lastUsed: 0,
+    },
+  ];
+}
+
+// ── Dangerous environments that trigger a warning ──
+
+const DANGEROUS_ENVS = new Set(["production", "prod", "staging"]);
+
+export function isDangerousEnv(env: string): boolean {
+  return DANGEROUS_ENVS.has(env.toLowerCase());
+}
+
+// ── Store ──
 
 interface TerminalState {
   /** All terminal sessions */
@@ -9,16 +66,20 @@ interface TerminalState {
   activeSessionId: string | null;
   /** Command input value */
   commandInput: string;
-  /** Saved run configurations */
-  savedCommands: string[];
+  /** Saved run configurations (persisted) */
+  savedRuns: SavedRunConfig[];
 
   // Actions
   createSession: (env: string, command: string) => TerminalSession;
   removeSession: (id: string) => void;
   setActiveSession: (id: string) => void;
   setCommandInput: (input: string) => void;
-  addSavedCommand: (command: string) => void;
-  removeSavedCommand: (command: string) => void;
+
+  // Saved runs management
+  addSavedRun: (label: string, command: string, env: string | null) => void;
+  updateSavedRun: (id: string, updates: Partial<Pick<SavedRunConfig, "label" | "command" | "env">>) => void;
+  removeSavedRun: (id: string) => void;
+  touchSavedRun: (id: string) => void;
 
   launchProcess: (
     cwd: string,
@@ -37,12 +98,13 @@ interface TerminalState {
 }
 
 let sessionCounter = 0;
+let savedRunCounter = 0;
 
 export const useTerminalStore = create<TerminalState>((set, get) => ({
   sessions: [],
   activeSessionId: null,
   commandInput: "npm run dev",
-  savedCommands: ["npm run dev", "npm test", "npm run build"],
+  savedRuns: loadSavedRuns(),
 
   createSession: (env, command) => {
     sessionCounter++;
@@ -85,18 +147,53 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
   setActiveSession: (id) => set({ activeSessionId: id }),
   setCommandInput: (input) => set({ commandInput: input }),
 
-  addSavedCommand: (command) => {
+  // ── Saved runs CRUD ──
+
+  addSavedRun: (label, command, env) => {
+    savedRunCounter++;
+    const newRun: SavedRunConfig = {
+      id: `saved-${Date.now()}-${savedRunCounter}`,
+      label,
+      command,
+      env,
+      lastUsed: 0,
+    };
     set((state) => {
-      if (state.savedCommands.includes(command)) return state;
-      return { savedCommands: [...state.savedCommands, command] };
+      const savedRuns = [...state.savedRuns, newRun];
+      persistSavedRuns(savedRuns);
+      return { savedRuns };
     });
   },
 
-  removeSavedCommand: (command) => {
-    set((state) => ({
-      savedCommands: state.savedCommands.filter((c) => c !== command),
-    }));
+  updateSavedRun: (id, updates) => {
+    set((state) => {
+      const savedRuns = state.savedRuns.map((r) =>
+        r.id === id ? { ...r, ...updates } : r,
+      );
+      persistSavedRuns(savedRuns);
+      return { savedRuns };
+    });
   },
+
+  removeSavedRun: (id) => {
+    set((state) => {
+      const savedRuns = state.savedRuns.filter((r) => r.id !== id);
+      persistSavedRuns(savedRuns);
+      return { savedRuns };
+    });
+  },
+
+  touchSavedRun: (id) => {
+    set((state) => {
+      const savedRuns = state.savedRuns.map((r) =>
+        r.id === id ? { ...r, lastUsed: Date.now() } : r,
+      );
+      persistSavedRuns(savedRuns);
+      return { savedRuns };
+    });
+  },
+
+  // ── Process lifecycle ──
 
   launchProcess: async (cwd, env, command, onOutput, onExit) => {
     const session = get().createSession(env, command);

@@ -1,16 +1,21 @@
 import { useEffect, useRef } from "react";
 import { useProjectStore } from "@/stores/projectStore";
 import { useEnvironmentStore } from "@/stores/environmentStore";
+import { useFileWatcher } from "@/hooks/useFileWatcher";
 import { EnvironmentCard } from "./EnvironmentCard";
 
 /**
  * Grid of environment cards for the active project.
  * Automatically loads environment data when project changes.
+ * Watches for .env file changes on disk and auto-reloads.
  */
 export function EnvironmentCards() {
   const activeProject = useProjectStore((s) => s.activeProject);
   const { activeEnv, loadResult, isLoading, error, loadEnvironment, setActiveEnv } =
     useEnvironmentStore();
+
+  // Watch for .env file changes and auto-reload
+  useFileWatcher(activeProject?.id, activeProject?.path);
 
   // Guard against stale data when rapidly switching projects
   const loadIdRef = useRef(0);

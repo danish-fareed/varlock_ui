@@ -131,6 +131,7 @@ impl AppState {
     }
 
     /// Update a project's status.
+    #[allow(dead_code)]
     pub fn update_project_status(&self, id: &str, status: ProjectStatus) {
         let mut data = self.lock();
         if let Some(project) = data.projects.iter_mut().find(|p| p.id == id) {

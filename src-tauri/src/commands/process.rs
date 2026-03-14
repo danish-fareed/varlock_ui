@@ -3,8 +3,6 @@ use crate::varlock::cli;
 use crate::varlock::types::ProcessEvent;
 use tauri::ipc::Channel;
 use tauri::State;
-#[cfg(target_os = "windows")]
-use std::os::windows::process::CommandExt;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 

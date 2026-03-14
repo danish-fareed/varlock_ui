@@ -1,7 +1,5 @@
 use std::path::PathBuf;
 use std::time::Duration;
-#[cfg(target_os = "windows")]
-use std::os::windows::process::CommandExt;
 use tokio::process::Command;
 
 /// Timeout for detection commands.

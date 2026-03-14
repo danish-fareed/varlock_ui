@@ -1,15 +1,17 @@
-import type { VarlockVariable } from "@/lib/types";
+import type { MergedVariable } from "@/lib/types";
 import { TYPE_BADGE_STYLES, DEFAULT_TYPE_BADGE } from "@/lib/constants";
 
 interface VariableRowProps {
-  variable: VarlockVariable;
+  variable: MergedVariable;
+  onSelect?: (variable: MergedVariable) => void;
 }
 
 /**
  * Single row in the variable list table.
  * Shows key, value (masked if sensitive), type badge, and status badge.
+ * Uses MergedVariable which already includes hasSchema and metadata source info.
  */
-export function VariableRow({ variable }: VariableRowProps) {
+export function VariableRow({ variable, onSelect }: VariableRowProps) {
   const typeBadge = TYPE_BADGE_STYLES[variable.type] ?? DEFAULT_TYPE_BADGE;
 
   const statusClass = !variable.valid
@@ -37,7 +39,11 @@ export function VariableRow({ variable }: VariableRowProps) {
     );
 
   return (
-    <div className="grid grid-cols-[180px_1fr_80px_80px] px-3 py-2 gap-3 items-center hover:bg-surface-secondary transition-colors">
+    <button
+      type="button"
+      onClick={() => onSelect?.(variable)}
+      className="w-full text-left grid grid-cols-[180px_1fr_80px_80px] px-3 py-2 gap-3 items-center hover:bg-surface-secondary transition-colors cursor-pointer"
+    >
       {/* Key */}
       <div className="font-mono text-xs font-medium text-text truncate">
         {variable.key}
@@ -48,14 +54,22 @@ export function VariableRow({ variable }: VariableRowProps) {
         {displayValue}
       </div>
 
-      {/* Type badge */}
-      <div>
+      {/* Type badge with inferred indicator */}
+      <div className="flex items-center gap-1">
         <span
           className="text-[10px] font-medium px-2 py-0.5 rounded-full"
           style={{ backgroundColor: typeBadge.bg, color: typeBadge.text }}
         >
           {variable.type}
         </span>
+        {!variable.hasSchema && (
+          <span
+            className="text-[9px] text-text-muted opacity-60"
+            title="Type inferred — not confirmed in .env.schema"
+          >
+            *
+          </span>
+        )}
       </div>
 
       {/* Status badge */}
@@ -66,6 +80,6 @@ export function VariableRow({ variable }: VariableRowProps) {
           {statusLabel}
         </span>
       </div>
-    </div>
+    </button>
   );
 }

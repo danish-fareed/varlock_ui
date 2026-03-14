@@ -1,9 +1,3 @@
-/** Application name displayed in the title bar and sidebar */
-export const APP_NAME = "Varlock";
-
-/** Minimum supported varlock CLI version */
-export const MIN_VARLOCK_VERSION = "0.9.0";
-
 /** Terminal font configuration */
 export const TERMINAL_FONT_FAMILY =
   '"Cascadia Code", "Fira Code", "JetBrains Mono", "Menlo", "Consolas", monospace';
