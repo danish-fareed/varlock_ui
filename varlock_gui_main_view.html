@@ -1,0 +1,255 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);font-size:13px;color:var(--color-text-primary);background:transparent}
+.app{display:grid;grid-template-columns:220px 1fr;min-height:640px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-lg);overflow:hidden;background:var(--color-background-primary)}
+.sidebar{background:var(--color-background-secondary);border-right:0.5px solid var(--color-border-tertiary);display:flex;flex-direction:column}
+.sidebar-header{padding:14px 14px 10px;border-bottom:0.5px solid var(--color-border-tertiary)}
+.sidebar-header p{font-size:11px;color:var(--color-text-tertiary);margin-top:2px}
+.brand{font-size:15px;font-weight:500;color:var(--color-text-primary);display:flex;align-items:center;gap:7px}
+.brand-dot{width:10px;height:10px;border-radius:50%;background:#534AB7}
+.section-label{font-size:10px;font-weight:500;color:var(--color-text-tertiary);letter-spacing:.06em;text-transform:uppercase;padding:14px 14px 6px}
+.proj-item{display:flex;align-items:center;gap:9px;padding:7px 14px;cursor:pointer;border-radius:0;transition:background .12s}
+.proj-item:hover{background:var(--color-background-primary)}
+.proj-item.active{background:var(--color-background-primary);border-right:2px solid #534AB7}
+.proj-avatar{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0}
+.pa-purple{background:#EEEDFE;color:#534AB7}
+.pa-teal{background:#E1F5EE;color:#0F6E56}
+.pa-coral{background:#FAECE7;color:#993C1D}
+.proj-info{overflow:hidden}
+.proj-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.proj-path{font-size:11px;color:var(--color-text-tertiary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.proj-status{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-left:auto}
+.st-ok{background:#639922}
+.st-warn{background:#BA7517}
+.st-err{background:#E24B4A}
+.sidebar-bottom{margin-top:auto;padding:12px 14px;border-top:0.5px solid var(--color-border-tertiary)}
+.add-btn{width:100%;padding:7px;border:0.5px dashed var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;gap:5px}
+.add-btn:hover{background:var(--color-background-primary);color:var(--color-text-primary)}
+.main{display:flex;flex-direction:column;overflow:hidden}
+.topbar{display:flex;align-items:center;padding:12px 18px;border-bottom:0.5px solid var(--color-border-tertiary);gap:10px}
+.proj-title{font-size:15px;font-weight:500;flex:1}
+.proj-tag{font-size:11px;padding:3px 8px;border-radius:20px;font-weight:500}
+.tag-purple{background:#EEEDFE;color:#534AB7}
+.topbar-actions{display:flex;gap:7px}
+.btn{padding:5px 12px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-primary);cursor:pointer;font-size:12px;white-space:nowrap}
+.btn:hover{background:var(--color-background-secondary)}
+.btn-primary{background:#534AB7;color:#EEEDFE;border-color:#534AB7}
+.btn-primary:hover{background:#3C3489;border-color:#3C3489}
+.content{flex:1;padding:18px;overflow:auto;display:flex;flex-direction:column;gap:16px}
+.env-section h3{font-size:12px;font-weight:500;color:var(--color-text-secondary);margin-bottom:10px;letter-spacing:.04em}
+.env-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.env-card{border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-lg);padding:14px;cursor:pointer;transition:border-color .15s,background .15s;position:relative}
+.env-card:hover{border-color:#534AB7;background:#EEEDFE08}
+.env-card.active-env{border-color:#534AB7;border-width:1.5px}
+.env-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.env-badge{font-size:11px;font-weight:500;padding:3px 8px;border-radius:20px}
+.eb-dev{background:#E1F5EE;color:#0F6E56}
+.eb-prod{background:#FCEBEB;color:#A32D2D}
+.eb-test{background:#FAEEDA;color:#633806}
+.env-indicator{width:7px;height:7px;border-radius:50%}
+.ind-active{background:#639922}
+.ind-inactive{background:var(--color-border-secondary)}
+.env-label{font-size:14px;font-weight:500;margin-bottom:3px}
+.env-vars{font-size:11px;color:var(--color-text-tertiary);margin-bottom:12px}
+.env-actions{display:flex;gap:6px}
+.env-btn{flex:1;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;cursor:pointer;font-size:11px;color:var(--color-text-secondary);display:flex;align-items:center;justify-content:center;gap:4px}
+.env-btn:hover{background:var(--color-background-secondary);color:var(--color-text-primary)}
+.env-btn-primary{background:#534AB7;color:#EEEDFE;border-color:#534AB7}
+.env-btn-primary:hover{background:#3C3489}
+.env-active-label{position:absolute;top:-1px;right:10px;font-size:10px;font-weight:500;color:#534AB7;background:var(--color-background-primary);padding:0 4px}
+.divider{height:0.5px;background:var(--color-border-tertiary)}
+.vars-section{}
+.vars-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.vars-header h3{font-size:12px;font-weight:500;color:var(--color-text-secondary);letter-spacing:.04em}
+.vars-filter{display:flex;gap:6px}
+.filter-pill{font-size:11px;padding:3px 10px;border-radius:20px;border:0.5px solid var(--color-border-secondary);background:transparent;cursor:pointer;color:var(--color-text-secondary)}
+.filter-pill.on{background:#EEEDFE;color:#534AB7;border-color:#AFA9EC}
+.var-row{display:grid;grid-template-columns:180px 1fr 80px 80px;align-items:center;padding:8px 10px;border-radius:var(--border-radius-md);gap:10px}
+.var-row:hover{background:var(--color-background-secondary)}
+.var-key{font-family:var(--font-mono);font-size:12px;font-weight:500}
+.var-val{font-family:var(--font-mono);font-size:12px;color:var(--color-text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.var-type{font-size:10px;padding:2px 7px;border-radius:20px;text-align:center;font-weight:500}
+.vt-url{background:#E6F1FB;color:#185FA5}
+.vt-str{background:#F1EFE8;color:#5F5E5A}
+.vt-port{background:#E1F5EE;color:#0F6E56}
+.vt-enum{background:#FAEEDA;color:#633806}
+.var-status{display:flex;justify-content:flex-end}
+.vstatus{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:500}
+.vs-ok{background:#EAF3DE;color:#3B6D11}
+.vs-err{background:#FCEBEB;color:#A32D2D}
+.vs-secret{background:#EEEDFE;color:#534AB7}
+.vars-list{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden}
+.vars-list-header{display:grid;grid-template-columns:180px 1fr 80px 80px;padding:7px 10px;background:var(--color-background-secondary);gap:10px;border-bottom:0.5px solid var(--color-border-tertiary)}
+.vars-list-header span{font-size:10px;font-weight:500;color:var(--color-text-tertiary);letter-spacing:.05em;text-transform:uppercase}
+.var-sep{height:0.5px;background:var(--color-border-tertiary);margin:0 10px}
+.terminal-hint{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);font-size:12px;color:var(--color-text-secondary)}
+.term-icon{width:24px;height:24px;border-radius:6px;background:#2C2C2A;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.term-icon-inner{width:8px;height:8px;border-left:2px solid #97C459;border-bottom:2px solid #97C459;border-radius:0 0 0 2px}
+</style>
+<div class="app">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="brand"><div class="brand-dot"></div>Varlock GUI</div>
+      <p>3 projects</p>
+    </div>
+    <div class="section-label">Projects</div>
+    <div class="proj-item active">
+      <div class="proj-avatar pa-purple">MY</div>
+      <div class="proj-info">
+        <div class="proj-name">my-saas-app</div>
+        <div class="proj-path">~/projects/my-saas-app</div>
+      </div>
+      <div class="proj-status st-ok"></div>
+    </div>
+    <div class="proj-item">
+      <div class="proj-avatar pa-teal">AP</div>
+      <div class="proj-info">
+        <div class="proj-name">api-service</div>
+        <div class="proj-path">~/projects/api-service</div>
+      </div>
+      <div class="proj-status st-warn"></div>
+    </div>
+    <div class="proj-item">
+      <div class="proj-avatar pa-coral">ML</div>
+      <div class="proj-info">
+        <div class="proj-name">ml-pipeline</div>
+        <div class="proj-path">~/projects/ml-pipeline</div>
+      </div>
+      <div class="proj-status st-err"></div>
+    </div>
+    <div class="sidebar-bottom">
+      <button class="add-btn" onclick="sendPrompt('Show me the Add Project flow — importing existing .env files and migrating to Varlock schema')">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Add project
+      </button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="proj-title">my-saas-app</div>
+      <span class="proj-tag tag-purple">varlock ready</span>
+      <div class="topbar-actions">
+        <button class="btn" onclick="sendPrompt('Show me the varlock scan security audit results screen for this project')">Scan secrets</button>
+        <button class="btn" onclick="sendPrompt('Show me the Team management screen — inviting members, role permissions, shared envs')">Team</button>
+        <button class="btn btn-primary" onclick="sendPrompt('Show me the Run Command modal — picking an environment then running varlock run with terminal output streaming in')">Run command</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="env-section">
+        <h3>ENVIRONMENTS — click to activate or open terminal</h3>
+        <div class="env-cards">
+          <div class="env-card active-env">
+            <span class="env-active-label">active</span>
+            <div class="env-card-top">
+              <span class="env-badge eb-dev">development</span>
+              <div class="env-indicator ind-active"></div>
+            </div>
+            <div class="env-label">.env.development</div>
+            <div class="env-vars">14 variables · 3 secrets</div>
+            <div class="env-actions">
+              <button class="env-btn env-btn-primary" onclick="sendPrompt('Show me what happens when the user clicks Launch Terminal for the development environment — the terminal panel opens with varlock run activated')">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 2l3 3-3 3M6 8h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Launch terminal
+              </button>
+              <button class="env-btn" onclick="sendPrompt('Show me the environment variable editor for development env')">Edit vars</button>
+            </div>
+          </div>
+
+          <div class="env-card">
+            <div class="env-card-top">
+              <span class="env-badge eb-prod">production</span>
+              <div class="env-indicator ind-inactive"></div>
+            </div>
+            <div class="env-label">.env.production</div>
+            <div class="env-vars">14 variables · 8 secrets</div>
+            <div class="env-actions">
+              <button class="env-btn" onclick="sendPrompt('Show me what happens when the user clicks Launch Terminal for the production environment — warning dialog first since its prod')">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 2l3 3-3 3M6 8h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Launch terminal
+              </button>
+              <button class="env-btn" onclick="sendPrompt('Show me the environment variable editor for production env')">Edit vars</button>
+            </div>
+          </div>
+
+          <div class="env-card">
+            <div class="env-card-top">
+              <span class="env-badge eb-test">test</span>
+              <div class="env-indicator ind-inactive"></div>
+            </div>
+            <div class="env-label">.env.test</div>
+            <div class="env-vars">10 variables · 1 secret</div>
+            <div class="env-actions">
+              <button class="env-btn" onclick="sendPrompt('Show me what happens when the user clicks Launch Terminal for the test environment')">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 2l3 3-3 3M6 8h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Launch terminal
+              </button>
+              <button class="env-btn" onclick="sendPrompt('Show me the environment variable editor for test env')">Edit vars</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="vars-section">
+        <div class="vars-header">
+          <h3>VARIABLES — development</h3>
+          <div class="vars-filter">
+            <button class="filter-pill on">All</button>
+            <button class="filter-pill">Secrets</button>
+            <button class="filter-pill">Errors</button>
+            <button class="filter-pill">Required</button>
+          </div>
+        </div>
+        <div class="vars-list">
+          <div class="vars-list-header">
+            <span>Key</span><span>Value</span><span>Type</span><span>Status</span>
+          </div>
+          <div class="var-row" style="cursor:pointer" onclick="sendPrompt('Show me the variable detail editor for APP_ENV — editing value, type, decorators, description')">
+            <div class="var-key">APP_ENV</div>
+            <div class="var-val">development</div>
+            <div><span class="var-type vt-enum">enum</span></div>
+            <div class="var-status"><span class="vstatus vs-ok">valid</span></div>
+          </div>
+          <div class="var-sep"></div>
+          <div class="var-row" style="cursor:pointer" onclick="sendPrompt('Show me the variable detail editor for API_PORT')">
+            <div class="var-key">API_PORT</div>
+            <div class="var-val">3000</div>
+            <div><span class="var-type vt-port">port</span></div>
+            <div class="var-status"><span class="vstatus vs-ok">valid</span></div>
+          </div>
+          <div class="var-sep"></div>
+          <div class="var-row" style="cursor:pointer" onclick="sendPrompt('Show me the variable detail editor for API_URL — its an expanded value referencing API_PORT')">
+            <div class="var-key">API_URL</div>
+            <div class="var-val">http://localhost:3000</div>
+            <div><span class="var-type vt-url">url</span></div>
+            <div class="var-status"><span class="vstatus vs-ok">valid</span></div>
+          </div>
+          <div class="var-sep"></div>
+          <div class="var-row" style="cursor:pointer" onclick="sendPrompt('Show me the variable detail editor for OPENAI_API_KEY — its a secret fetched from 1Password')">
+            <div class="var-key">OPENAI_API_KEY</div>
+            <div class="var-val">▒▒▒▒▒▒▒▒▒▒▒▒▒▒</div>
+            <div><span class="var-type vt-str">string</span></div>
+            <div class="var-status"><span class="vstatus vs-secret">secret</span></div>
+          </div>
+          <div class="var-sep"></div>
+          <div class="var-row" style="cursor:pointer" onclick="sendPrompt('Show me the variable detail editor for DATABASE_URL — it has a validation error, value is missing')">
+            <div class="var-key">DATABASE_URL</div>
+            <div class="var-val" style="color:var(--color-text-danger)">— missing</div>
+            <div><span class="var-type vt-url">url</span></div>
+            <div class="var-status"><span class="vstatus vs-err">required</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="terminal-hint" onclick="sendPrompt('Show me the full terminal launch experience — selecting env then the embedded terminal panel opening with varlock run streaming output')">
+        <div class="term-icon"><div class="term-icon-inner"></div></div>
+        <div style="flex:1">Select an environment above and click <strong style="font-weight:500">Launch terminal</strong> — a terminal opens with that env automatically activated via <code style="font-size:11px;background:var(--color-background-primary);padding:1px 5px;border-radius:4px;border:0.5px solid var(--color-border-secondary)">varlock run</code></div>
+        <button class="btn" style="flex-shrink:0" onclick="event.stopPropagation();sendPrompt('Show me the terminal panel view with varlock run active and streaming output')">Open terminal ↗</button>
+      </div>
+    </div>
+  </div>
+</div>

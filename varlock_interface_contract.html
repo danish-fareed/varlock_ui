@@ -1,0 +1,235 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);font-size:13px;color:var(--color-text-primary)}
+.wrap{display:flex;flex-direction:column;gap:16px;padding:4px 0}
+
+.layer{border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-lg);overflow:hidden}
+.layer-header{padding:10px 16px;background:var(--color-background-secondary);border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px}
+.layer-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.layer-title{font-size:13px;font-weight:500}
+.layer-sub{font-size:11px;color:var(--color-text-tertiary);margin-left:auto}
+.layer-body{padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+
+.cmd-block{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);overflow:hidden}
+.cmd-top{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:0.5px solid var(--color-border-tertiary)}
+.cmd-name{font-family:var(--font-mono);font-size:12px;font-weight:500;color:var(--color-text-primary);flex:1}
+.cmd-badge{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500;white-space:nowrap}
+.cb-json{background:#E1F5EE;color:#0F6E56}
+.cb-stream{background:#EEEDFE;color:#534AB7}
+.cb-exit{background:#FAEEDA;color:#633806}
+.cb-write{background:#E6F1FB;color:#185FA5}
+.cmd-body{padding:8px 12px;display:flex;flex-direction:column;gap:5px}
+.cmd-row{display:grid;grid-template-columns:220px 1fr;gap:12px;align-items:baseline;font-size:12px}
+.cmd-label{color:var(--color-text-tertiary)}
+.cmd-val{font-family:var(--font-mono);font-size:11px;color:var(--color-text-secondary);line-height:1.5}
+.cmd-note{font-size:11px;color:var(--color-text-tertiary);line-height:1.5;padding-top:4px;border-top:0.5px solid var(--color-border-tertiary);margin-top:4px}
+
+.json-preview{background:#1a1a18;border-radius:var(--border-radius-md);padding:12px;font-family:var(--font-mono);font-size:11px;line-height:1.7;overflow:auto}
+.jk{color:#AFA9EC}
+.js{color:#97C459}
+.jn{color:#EF9F27}
+.jb{color:#85B7EB}
+.jc{color:#555}
+
+.flow{display:grid;grid-template-columns:1fr 24px 1fr 24px 1fr;gap:0;align-items:center}
+.flow-box{padding:10px 12px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);text-align:center;background:var(--color-background-primary)}
+.flow-box p{font-size:12px;font-weight:500;margin-bottom:3px}
+.flow-box span{font-size:10px;color:var(--color-text-tertiary)}
+.flow-arrow{text-align:center;color:var(--color-text-tertiary);font-size:14px}
+
+.exit-grid{display:grid;grid-template-columns:60px 1fr;gap:8px 16px;align-items:baseline;font-size:12px}
+.exit-code{font-family:var(--font-mono);font-weight:500;padding:2px 8px;border-radius:var(--border-radius-md);text-align:center}
+.ec-ok{background:#EAF3DE;color:#3B6D11}
+.ec-err{background:#FCEBEB;color:#A32D2D}
+.ec-warn{background:#FAEEDA;color:#633806}
+
+.file-ops{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.file-op{padding:10px 12px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);background:var(--color-background-primary)}
+.file-op p{font-size:12px;font-weight:500;margin-bottom:4px}
+.file-op span{font-size:11px;color:var(--color-text-tertiary);line-height:1.5;display:block}
+</style>
+
+<div class="wrap">
+
+<div class="layer">
+  <div class="layer-header">
+    <div class="layer-dot" style="background:#534AB7"></div>
+    <div class="layer-title">Interface 1 — varlock load (your main data source)</div>
+    <div class="layer-sub">reads schema → validates → outputs JSON</div>
+  </div>
+  <div class="layer-body">
+    <div class="cmd-block">
+      <div class="cmd-top">
+        <div class="cmd-name">varlock load --format=json</div>
+        <span class="cmd-badge cb-json">JSON stdout</span>
+        <span class="cmd-badge cb-exit">exit code</span>
+      </div>
+      <div class="cmd-body">
+        <div class="cmd-row"><span class="cmd-label">What you call it for</span><span class="cmd-val">Read all variables, their resolved values (masked if sensitive), types, validation status, errors</span></div>
+        <div class="cmd-row"><span class="cmd-label">When to call it</span><span class="cmd-val">On project open · on file change (watch mode) · on manual refresh · after any edit</span></div>
+        <div class="cmd-row"><span class="cmd-label">Key flags</span><span class="cmd-val">--format=json &nbsp;·&nbsp; --env=production &nbsp;·&nbsp; --cwd=/path/to/project</span></div>
+        <div class="cmd-note">This is the heartbeat of your UI. Every variable row, validation badge, and env summary in your dashboard comes from parsing this command's JSON output. Call it on a file watcher, not on a polling timer.</div>
+      </div>
+    </div>
+
+    <div class="json-preview">
+<span class="jc">// stdout from: varlock load --format=json</span>
+{
+  <span class="jk">"env"</span>: <span class="js">"development"</span>,
+  <span class="jk">"valid"</span>: <span class="jb">false</span>,
+  <span class="jk">"errorCount"</span>: <span class="jn">1</span>,
+  <span class="jk">"warningCount"</span>: <span class="jn">0</span>,
+  <span class="jk">"variables"</span>: [
+    {
+      <span class="jk">"key"</span>: <span class="js">"APP_ENV"</span>,
+      <span class="jk">"value"</span>: <span class="js">"development"</span>,
+      <span class="jk">"type"</span>: <span class="js">"enum"</span>,
+      <span class="jk">"sensitive"</span>: <span class="jb">false</span>,
+      <span class="jk">"required"</span>: <span class="jb">true</span>,
+      <span class="jk">"valid"</span>: <span class="jb">true</span>,
+      <span class="jk">"source"</span>: <span class="js">".env.schema"</span>,
+      <span class="jk">"errors"</span>: []
+    },
+    {
+      <span class="jk">"key"</span>: <span class="js">"OPENAI_API_KEY"</span>,
+      <span class="jk">"value"</span>: <span class="js">"▒▒▒▒▒▒▒▒▒▒▒▒"</span>,  <span class="jc">// always masked</span>
+      <span class="jk">"type"</span>: <span class="js">"string"</span>,
+      <span class="jk">"sensitive"</span>: <span class="jb">true</span>,
+      <span class="jk">"required"</span>: <span class="jb">true</span>,
+      <span class="jk">"valid"</span>: <span class="jb">true</span>,
+      <span class="jk">"source"</span>: <span class="js">"1password"</span>,
+      <span class="jk">"errors"</span>: []
+    },
+    {
+      <span class="jk">"key"</span>: <span class="js">"DATABASE_URL"</span>,
+      <span class="jk">"value"</span>: <span class="jb">null</span>,
+      <span class="jk">"type"</span>: <span class="js">"url"</span>,
+      <span class="jk">"sensitive"</span>: <span class="jb">true</span>,
+      <span class="jk">"required"</span>: <span class="jb">true</span>,
+      <span class="jk">"valid"</span>: <span class="jb">false</span>,
+      <span class="jk">"source"</span>: <span class="jb">null</span>,
+      <span class="jk">"errors"</span>: [<span class="js">"Required variable is missing"</span>]
+    }
+  ]
+}
+    </div>
+  </div>
+</div>
+
+<div class="layer">
+  <div class="layer-header">
+    <div class="layer-dot" style="background:#639922"></div>
+    <div class="layer-title">Interface 2 — varlock run (terminal launcher)</div>
+    <div class="layer-sub">spawns child process with env injected</div>
+  </div>
+  <div class="layer-body">
+    <div class="cmd-block">
+      <div class="cmd-top">
+        <div class="cmd-name">varlock run -- &lt;user command&gt;</div>
+        <span class="cmd-badge cb-stream">streaming stdout/stderr</span>
+        <span class="cmd-badge cb-exit">exit code</span>
+      </div>
+      <div class="cmd-body">
+        <div class="cmd-row"><span class="cmd-label">What you use it for</span><span class="cmd-val">The "Launch terminal" button. Pipes all output to your xterm.js panel in real time.</span></div>
+        <div class="cmd-row"><span class="cmd-label">Examples</span><span class="cmd-val">varlock run -- npm run dev &nbsp;·&nbsp; varlock run -- python manage.py migrate &nbsp;·&nbsp; varlock run -- $SHELL</span></div>
+        <div class="cmd-row"><span class="cmd-label">Env override</span><span class="cmd-val">APP_ENV=production varlock run -- npm run build</span></div>
+        <div class="cmd-row"><span class="cmd-label">How you consume it</span><span class="cmd-val">spawn() with stdio: 'pipe' · pipe stdout+stderr chunks to xterm.js · watch exit code for status</span></div>
+        <div class="cmd-note">Do NOT use exec() — it buffers. Use spawn() so chunks stream in real time. Pass the user's chosen environment as a process env override before the varlock command. Varlock's startup lines (resolving, validating) appear in the stream before the child process output — show them in the terminal panel as-is.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="layer">
+  <div class="layer-header">
+    <div class="layer-dot" style="background:#E24B4A"></div>
+    <div class="layer-title">Interface 3 — varlock scan (security audit)</div>
+    <div class="layer-sub">scans project files for plaintext secret leaks</div>
+  </div>
+  <div class="layer-body">
+    <div class="cmd-block">
+      <div class="cmd-top">
+        <div class="cmd-name">varlock scan</div>
+        <span class="cmd-badge cb-json">structured output</span>
+        <span class="cmd-badge cb-exit">exit code 0 = clean</span>
+      </div>
+      <div class="cmd-body">
+        <div class="cmd-row"><span class="cmd-label">What you use it for</span><span class="cmd-val">The "Scan secrets" button. Shows which files contain plaintext sensitive values.</span></div>
+        <div class="cmd-row"><span class="cmd-label">Output</span><span class="cmd-val">File path · line number · which secret key was found · severity</span></div>
+        <div class="cmd-note">Exit code 0 = no leaks found. Non-zero = leaks detected. Parse stdout for file locations to show in your audit results panel. Surface this prominently — it's a key value-add of the product.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="layer">
+  <div class="layer-header">
+    <div class="layer-dot" style="background:#185FA5"></div>
+    <div class="layer-title">Interface 4 — exit codes (your health signal)</div>
+    <div class="layer-sub">how varlock tells you if things are broken</div>
+  </div>
+  <div class="layer-body">
+    <div class="exit-grid">
+      <div class="exit-code ec-ok">0</div><div style="font-size:12px;color:var(--color-text-secondary)">All variables valid — show green status in sidebar project dot</div>
+      <div class="exit-code ec-err">1</div><div style="font-size:12px;color:var(--color-text-secondary)">Validation errors — required variable missing, type mismatch, secret resolution failed — show red dot</div>
+      <div class="exit-code ec-warn">2</div><div style="font-size:12px;color:var(--color-text-secondary)">Warnings only — optional variable missing, non-critical issue — show amber dot</div>
+    </div>
+  </div>
+</div>
+
+<div class="layer">
+  <div class="layer-header">
+    <div class="layer-dot" style="background:#BA7517"></div>
+    <div class="layer-title">Interface 5 — filesystem (your write interface)</div>
+    <div class="layer-sub">this is how your UI makes changes — varlock has no write API</div>
+  </div>
+  <div class="layer-body">
+    <div class="file-ops">
+      <div class="file-op">
+        <p>Read .env.schema</p>
+        <span>Your UI reads this file directly using the @env-spec/parser npm library to build the schema editor view. Varlock has no "get schema" endpoint — the file IS the API.</span>
+      </div>
+      <div class="file-op">
+        <p>Write .env.schema</p>
+        <span>When user edits a variable, type, decorator, or description — your UI writes the updated file back to disk, then triggers varlock load to re-validate.</span>
+      </div>
+      <div class="file-op">
+        <p>Read .env.* files</p>
+        <span>Your UI reads .env.development, .env.production etc. directly to show per-environment values. Standard dotenv parsing — no varlock needed for reading these.</span>
+      </div>
+      <div class="file-op">
+        <p>Write .env.* files</p>
+        <span>When user sets a value for a specific environment, your UI writes to the appropriate .env.{env} file. Then re-runs varlock load to confirm validity.</span>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:8px;padding:8px 12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary)">
+      Key insight: Varlock is read-only from the CLI perspective. All mutations (adding variables, changing types, editing values) happen by your UI writing files to disk. Varlock then reads those files on the next load call. Your UI is the writer. Varlock is the reader and validator.
+    </div>
+  </div>
+</div>
+
+<div class="layer">
+  <div class="layer-header">
+    <div class="layer-dot" style="background:#0F6E56"></div>
+    <div class="layer-title">Interface 6 — varlock init (project setup)</div>
+    <div class="layer-sub">one-time migration from .env.example → .env.schema</div>
+  </div>
+  <div class="layer-body">
+    <div class="cmd-block">
+      <div class="cmd-top">
+        <div class="cmd-name">varlock init</div>
+        <span class="cmd-badge cb-write">writes .env.schema</span>
+        <span class="cmd-badge cb-exit">exit code</span>
+      </div>
+      <div class="cmd-body">
+        <div class="cmd-row"><span class="cmd-label">What you use it for</span><span class="cmd-val">The "Add project" wizard step 2 — migrating an existing project from .env.example to varlock</span></div>
+        <div class="cmd-row"><span class="cmd-label">What it does</span><span class="cmd-val">Reads .env.example → infers types → generates .env.schema → writes it to disk</span></div>
+        <div class="cmd-row"><span class="cmd-label">How to call it</span><span class="cmd-val">spawn('varlock', ['init', '--yes'], { cwd: projectPath }) to skip interactive prompts</span></div>
+        <div class="cmd-note">After this runs, your UI reads the generated .env.schema and shows it in the editor for the user to review and refine. You don't need to parse varlock init output — just check exit code 0 then read the file.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>

@@ -1,0 +1,182 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);font-size:13px;color:var(--color-text-primary)}
+.wizard{border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-lg);overflow:hidden;background:var(--color-background-primary);min-height:540px;display:grid;grid-template-rows:auto 1fr auto}
+.wiz-header{padding:16px 20px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:12px}
+.wiz-title{font-size:15px;font-weight:500;flex:1}
+.steps{display:flex;gap:0;align-items:center}
+.step{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--color-text-tertiary)}
+.step-num{width:22px;height:22px;border-radius:50%;border:0.5px solid var(--color-border-secondary);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0}
+.step.done .step-num{background:#639922;border-color:#639922;color:#EAF3DE}
+.step.active .step-num{background:#534AB7;border-color:#534AB7;color:#EEEDFE}
+.step.active{color:var(--color-text-primary);font-weight:500}
+.step-line{width:24px;height:0.5px;background:var(--color-border-tertiary);margin:0 4px}
+.wiz-body{padding:20px;display:flex;gap:20px}
+.wiz-left{flex:1}
+.wiz-right{width:260px;flex-shrink:0}
+.section-title{font-size:11px;font-weight:500;color:var(--color-text-tertiary);letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px}
+.dir-pick{border:0.5px dashed var(--color-border-secondary);border-radius:var(--border-radius-lg);padding:20px;text-align:center;cursor:pointer;background:var(--color-background-secondary);margin-bottom:16px}
+.dir-pick:hover{border-color:#534AB7;background:#EEEDFE20}
+.dir-pick-icon{width:36px;height:36px;border-radius:var(--border-radius-md);background:#EEEDFE;display:flex;align-items:center;justify-content:center;margin:0 auto 8px}
+.dir-pick p{font-size:13px;font-weight:500;margin-bottom:4px}
+.dir-pick span{font-size:11px;color:var(--color-text-tertiary)}
+.detected-title{font-size:12px;font-weight:500;margin-bottom:8px}
+.file-list{display:flex;flex-direction:column;gap:5px}
+.file-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);background:var(--color-background-secondary)}
+.file-icon{width:28px;height:28px;border-radius:6px;background:#E1F5EE;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.file-icon-dot{width:8px;height:8px;border-radius:2px;background:#0F6E56}
+.file-name{font-family:var(--font-mono);font-size:12px;font-weight:500;flex:1}
+.file-meta{font-size:11px;color:var(--color-text-tertiary)}
+.file-action{font-size:11px;padding:3px 9px;border-radius:20px;border:0.5px solid var(--color-border-secondary);background:transparent;cursor:pointer;color:var(--color-text-secondary)}
+.migrate-map{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden}
+.migrate-header{padding:8px 12px;background:var(--color-background-secondary);border-bottom:0.5px solid var(--color-border-tertiary);font-size:11px;color:var(--color-text-tertiary);display:grid;grid-template-columns:1fr 24px 1fr;gap:6px;align-items:center}
+.migrate-row{display:grid;grid-template-columns:1fr 24px 1fr;gap:6px;align-items:center;padding:7px 12px;border-bottom:0.5px solid var(--color-border-tertiary)}
+.migrate-row:last-child{border-bottom:none}
+.mr-key{font-family:var(--font-mono);font-size:11px}
+.mr-arrow{text-align:center;color:var(--color-text-tertiary);font-size:12px}
+.mr-result{display:flex;align-items:center;gap:5px}
+.mr-badge{font-size:10px;padding:2px 6px;border-radius:20px;font-weight:500;white-space:nowrap}
+.mb-ok{background:#EAF3DE;color:#3B6D11}
+.mb-secret{background:#EEEDFE;color:#534AB7}
+.mb-infer{background:#FAEEDA;color:#633806}
+.preview-box{background:#1a1a18;border-radius:var(--border-radius-lg);padding:14px;font-family:var(--font-mono);font-size:11px;line-height:1.8;margin-top:16px}
+.pc{color:#666}
+.pg{color:#97C459}
+.pp{color:#AFA9EC}
+.pa{color:#EF9F27}
+.pw{color:#e8e6df}
+.wiz-footer{padding:14px 20px;border-top:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px}
+.wiz-note{font-size:11px;color:var(--color-text-tertiary);flex:1}
+.btn{padding:6px 16px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;cursor:pointer;font-size:13px;color:var(--color-text-primary)}
+.btn:hover{background:var(--color-background-secondary)}
+.btn-primary{background:#534AB7;color:#EEEDFE;border-color:#534AB7}
+.btn-primary:hover{background:#3C3489}
+</style>
+<div class="wizard">
+  <div class="wiz-header">
+    <div class="wiz-title">Add project</div>
+    <div class="steps">
+      <div class="step done">
+        <div class="step-num">
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        Locate
+      </div>
+      <div class="step-line"></div>
+      <div class="step active">
+        <div class="step-num">2</div>
+        Migrate
+      </div>
+      <div class="step-line"></div>
+      <div class="step">
+        <div class="step-num">3</div>
+        Configure
+      </div>
+      <div class="step-line"></div>
+      <div class="step">
+        <div class="step-num">4</div>
+        Done
+      </div>
+    </div>
+  </div>
+
+  <div class="wiz-body">
+    <div class="wiz-left">
+      <div class="section-title">Detected files in ~/projects/my-saas-app</div>
+      <div class="file-list" style="margin-bottom:18px">
+        <div class="file-item">
+          <div class="file-icon"><div class="file-icon-dot"></div></div>
+          <div style="flex:1">
+            <div class="file-name">.env.example</div>
+            <div class="file-meta">18 variables · will become .env.schema</div>
+          </div>
+          <button class="file-action">Preview</button>
+        </div>
+        <div class="file-item">
+          <div class="file-icon" style="background:#FAEEDA"><div class="file-icon-dot" style="background:#854F0B"></div></div>
+          <div style="flex:1">
+            <div class="file-name">.env</div>
+            <div class="file-meta">6 variables · shared values detected</div>
+          </div>
+          <button class="file-action">Preview</button>
+        </div>
+        <div class="file-item">
+          <div class="file-icon" style="background:#FCEBEB"><div class="file-icon-dot" style="background:#A32D2D"></div></div>
+          <div style="flex:1">
+            <div class="file-name">.env.local</div>
+            <div class="file-meta">3 variables · gitignored, local overrides</div>
+          </div>
+          <button class="file-action">Preview</button>
+        </div>
+      </div>
+
+      <div class="section-title">Migration map — .env.example → .env.schema</div>
+      <div class="migrate-map">
+        <div class="migrate-header">
+          <span>Original variable</span><span></span><span>Inferred schema</span>
+        </div>
+        <div class="migrate-row">
+          <div class="mr-key">APP_ENV=development</div>
+          <div class="mr-arrow">→</div>
+          <div class="mr-result"><span class="mr-badge mb-infer">@type=enum</span></div>
+        </div>
+        <div class="migrate-row">
+          <div class="mr-key">API_PORT=3000</div>
+          <div class="mr-arrow">→</div>
+          <div class="mr-result"><span class="mr-badge mb-ok">@type=port</span></div>
+        </div>
+        <div class="migrate-row">
+          <div class="mr-key">API_URL=http://localhost:$PORT</div>
+          <div class="mr-arrow">→</div>
+          <div class="mr-result"><span class="mr-badge mb-ok">@type=url</span> <span class="mr-badge mb-ok">expansion</span></div>
+        </div>
+        <div class="migrate-row">
+          <div class="mr-key">OPENAI_API_KEY=sk-...</div>
+          <div class="mr-arrow">→</div>
+          <div class="mr-result"><span class="mr-badge mb-secret">@sensitive</span> <span class="mr-badge mb-infer">needs vault</span></div>
+        </div>
+        <div class="migrate-row">
+          <div class="mr-key">DATABASE_URL=postgres://</div>
+          <div class="mr-arrow">→</div>
+          <div class="mr-result"><span class="mr-badge mb-ok">@type=url</span> <span class="mr-badge mb-secret">@sensitive</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wiz-right">
+      <div class="section-title">Generated .env.schema preview</div>
+      <div class="preview-box">
+        <div><span class="pc"># @defaultSensitive=false</span></div>
+        <div><span class="pc"># @currentEnv=$APP_ENV</span></div>
+        <div><span class="pc"># ---</span></div>
+        <div style="margin-top:6px"><span class="pc"># @type=enum(development,</span></div>
+        <div><span class="pc">#   preview,production,test)</span></div>
+        <div><span class="pg">APP_ENV</span><span class="pw">=development</span></div>
+        <div style="margin-top:6px"><span class="pc"># @type=port</span></div>
+        <div><span class="pg">API_PORT</span><span class="pw">=3000</span></div>
+        <div style="margin-top:6px"><span class="pc"># @type=url @required</span></div>
+        <div><span class="pg">API_URL</span><span class="pw">=http://localhost:$&#123;API_PORT&#125;</span></div>
+        <div style="margin-top:6px"><span class="pc"># @sensitive @required</span></div>
+        <div><span class="pc"># @type=string(startsWith=sk-)</span></div>
+        <div><span class="pg">OPENAI_API_KEY</span><span class="pw">=</span></div>
+        <div style="margin-top:6px"><span class="pc"># @sensitive @required</span></div>
+        <div><span class="pc"># @type=url</span></div>
+        <div><span class="pg">DATABASE_URL</span><span class="pw">=</span></div>
+      </div>
+
+      <div style="margin-top:14px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:10px 12px;background:var(--color-background-secondary)">
+        <div style="font-size:11px;font-weight:500;margin-bottom:6px">2 secrets need vault setup</div>
+        <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:8px">OPENAI_API_KEY and DATABASE_URL were detected as sensitive. Connect a secret vault to fetch them automatically.</div>
+        <button style="width:100%;padding:6px;border:0.5px solid #534AB7;border-radius:var(--border-radius-md);background:#EEEDFE;color:#534AB7;cursor:pointer;font-size:11px;font-weight:500" onclick="sendPrompt('Show me the secret vault connection screen — choosing between 1Password, AWS Secrets Manager, Infisical — and mapping secret paths to variable names')">Set up vault →</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="wiz-footer">
+    <div class="wiz-note">Generated schema will be written to .env.schema · original files kept as backup</div>
+    <button class="btn">Back</button>
+    <button class="btn" onclick="sendPrompt('Show me the full generated .env.schema file before confirming migration')">Preview full file</button>
+    <button class="btn btn-primary" onclick="sendPrompt('Show me step 3 — Configure: setting up teams, choosing which envs each team member can access, and connecting the secret vault')">Apply migration →</button>
+  </div>
+</div>

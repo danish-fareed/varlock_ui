@@ -1,0 +1,210 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);font-size:13px;color:var(--color-text-primary)}
+.wrap{display:flex;flex-direction:column;gap:12px;padding:4px 0}
+
+.section-label{font-size:10px;font-weight:500;color:var(--color-text-tertiary);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px}
+
+.arch{display:grid;grid-template-columns:1fr 140px 1fr;gap:0;align-items:stretch}
+.arch-col{display:flex;flex-direction:column;gap:8px}
+.arch-middle{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:0 8px}
+
+.block{border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:10px 12px;background:var(--color-background-primary)}
+.block p{font-size:12px;font-weight:500;margin-bottom:4px}
+.block span{font-size:11px;color:var(--color-text-tertiary);line-height:1.5;display:block}
+.block.ui{border-color:#AFA9EC;background:#EEEDFE20}
+.block.eng{border-color:#9FE1CB;background:#E1F5EE20}
+.block.shared{border-color:#FAC775;background:#FAEEDA20}
+
+.interface-pill{padding:5px 10px;border-radius:20px;font-size:10px;font-weight:500;text-align:center;width:100%;background:var(--color-background-secondary);border:0.5px solid var(--color-border-secondary);color:var(--color-text-secondary);line-height:1.4}
+
+.arrow-right{font-size:16px;color:var(--color-text-tertiary);text-align:center}
+.arrow-both{font-size:14px;color:var(--color-text-tertiary);text-align:center}
+
+.boundary{border:1.5px dashed #534AB7;border-radius:var(--border-radius-lg);padding:12px;position:relative;margin-top:8px}
+.boundary-label{font-size:10px;font-weight:500;color:#534AB7;background:var(--color-background-primary);padding:0 6px;position:absolute;top:-8px;left:12px}
+
+.rules{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rule{padding:10px 12px;border-radius:var(--border-radius-md);font-size:11px;line-height:1.5}
+.rule-do{background:#EAF3DE;border:0.5px solid #C0DD97;color:#27500A}
+.rule-dont{background:#FCEBEB;border:0.5px solid #F7C1C1;color:#791F1F}
+.rule p{font-weight:500;margin-bottom:4px;font-size:12px}
+
+.call-table{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden}
+.ct-header{display:grid;grid-template-columns:180px 1fr 120px;padding:7px 12px;background:var(--color-background-secondary);border-bottom:0.5px solid var(--color-border-tertiary);gap:12px}
+.ct-header span{font-size:10px;font-weight:500;color:var(--color-text-tertiary);letter-spacing:.05em;text-transform:uppercase}
+.ct-row{display:grid;grid-template-columns:180px 1fr 120px;padding:8px 12px;border-bottom:0.5px solid var(--color-border-tertiary);gap:12px;align-items:center}
+.ct-row:last-child{border-bottom:none}
+.ct-action{font-size:12px;font-weight:500}
+.ct-call{font-family:var(--font-mono);font-size:11px;color:var(--color-text-secondary)}
+.ct-who{font-size:11px}
+.who-ui{color:#534AB7;font-weight:500}
+.who-fs{color:#BA7517;font-weight:500}
+.who-vl{color:#0F6E56;font-weight:500}
+</style>
+
+<div class="wrap">
+
+<div class="section-label">The clean separation — your UI vs Varlock</div>
+<div class="arch">
+  <div class="arch-col">
+    <div style="font-size:11px;font-weight:500;color:#534AB7;margin-bottom:4px;text-align:center">Your UI owns this</div>
+    <div class="block ui">
+      <p>Project management</p>
+      <span>Adding, removing, switching projects. Storing project paths. Recent projects list.</span>
+    </div>
+    <div class="block ui">
+      <p>Schema editor UI</p>
+      <span>The visual form for editing variables, types, decorators, descriptions.</span>
+    </div>
+    <div class="block ui">
+      <p>Environment switcher</p>
+      <span>The env card UI. Tracking which env is active. Building the env override flag.</span>
+    </div>
+    <div class="block ui">
+      <p>Terminal panel</p>
+      <span>xterm.js rendering. Saved run configs. The "Launch terminal" button UX.</span>
+    </div>
+    <div class="block ui">
+      <p>Team & auth (later)</p>
+      <span>User accounts, team invites, permission roles. All your own backend.</span>
+    </div>
+    <div class="block ui">
+      <p>File watching</p>
+      <span>Detecting when .env.* files change on disk and triggering re-validation.</span>
+    </div>
+  </div>
+
+  <div class="arch-middle">
+    <div class="interface-pill">varlock load --format=json</div>
+    <div class="arrow-both">↕</div>
+    <div class="interface-pill">varlock run -- cmd</div>
+    <div class="arrow-both">↕</div>
+    <div class="interface-pill">varlock scan</div>
+    <div class="arrow-both">↕</div>
+    <div class="interface-pill">varlock init</div>
+    <div class="arrow-both">↕</div>
+    <div class="interface-pill">filesystem r/w</div>
+  </div>
+
+  <div class="arch-col">
+    <div style="font-size:11px;font-weight:500;color:#0F6E56;margin-bottom:4px;text-align:center">Varlock owns this</div>
+    <div class="block eng">
+      <p>Schema parsing</p>
+      <span>Reading @env-spec decorators. Understanding types, constraints, functions.</span>
+    </div>
+    <div class="block eng">
+      <p>Value resolution</p>
+      <span>Variable expansion. exec() calls. ref() and remap() functions.</span>
+    </div>
+    <div class="block eng">
+      <p>Secret resolution</p>
+      <span>Calling 1Password, AWS, Infisical, Azure, GCP, Bitwarden plugins.</span>
+    </div>
+    <div class="block eng">
+      <p>Validation engine</p>
+      <span>Type checking, coercion, required checks, constraint validation.</span>
+    </div>
+    <div class="block eng">
+      <p>Environment injection</p>
+      <span>Setting process.env for child processes. File precedence merging.</span>
+    </div>
+    <div class="block eng">
+      <p>Leak scanning</p>
+      <span>Searching project files for plaintext sensitive value occurrences.</span>
+    </div>
+  </div>
+</div>
+
+<div class="boundary">
+  <div class="boundary-label">you never cross this boundary — varlock does not expose HTTP, you do not reimplement validation</div>
+  <div style="font-size:11px;color:var(--color-text-tertiary);text-align:center;padding:4px 0">Your UI writes files → Varlock reads them → Varlock outputs JSON → Your UI displays it</div>
+</div>
+
+<div class="section-label" style="margin-top:4px">Every UI action mapped to its interface call</div>
+<div class="call-table">
+  <div class="ct-header">
+    <span>User action</span><span>What your backend calls</span><span>Who does the work</span>
+  </div>
+  <div class="ct-row">
+    <div class="ct-action">Open a project</div>
+    <div class="ct-call">varlock load --format=json --cwd=/path</div>
+    <div class="ct-who"><span class="who-vl">Varlock</span></div>
+  </div>
+  <div class="ct-row">
+    <div class="ct-action">Switch environment</div>
+    <div class="ct-call">APP_ENV=production varlock load --format=json</div>
+    <div class="ct-who"><span class="who-vl">Varlock</span></div>
+  </div>
+  <div class="ct-row">
+    <div class="ct-action">Edit a variable value</div>
+    <div class="ct-call">write .env.{env} file → varlock load</div>
+    <div class="ct-who"><span class="who-ui">Your UI</span> + <span class="who-vl">Varlock</span></div>
+  </div>
+  <div class="ct-row">
+    <div class="ct-action">Edit type / decorator</div>
+    <div class="ct-call">write .env.schema file → varlock load</div>
+    <div class="ct-who"><span class="who-ui">Your UI</span> + <span class="who-vl">Varlock</span></div>
+  </div>
+  <div class="ct-row">
+    <div class="ct-action">Launch terminal</div>
+    <div class="ct-call">APP_ENV=x varlock run -- {command} (streamed)</div>
+    <div class="ct-who"><span class="who-vl">Varlock</span></div>
+  </div>
+  <div class="ct-row">
+    <div class="ct-action">Run security scan</div>
+    <div class="ct-call">varlock scan --format=json</div>
+    <div class="ct-who"><span class="who-vl">Varlock</span></div>
+  </div>
+  <div class="ct-row">
+    <div class="ct-action">Import existing project</div>
+    <div class="ct-call">varlock init --yes → read generated .env.schema</div>
+    <div class="ct-who"><span class="who-vl">Varlock</span></div>
+  </div>
+  <div class="ct-row">
+    <div class="ct-action">Add new environment</div>
+    <div class="ct-call">create .env.{newenv} file → varlock load</div>
+    <div class="ct-who"><span class="who-ui">Your UI</span></div>
+  </div>
+  <div class="ct-row">
+    <div class="ct-action">Read schema structure</div>
+    <div class="ct-call">read .env.schema directly (fs) + @env-spec/parser</div>
+    <div class="ct-who"><span class="who-fs">Filesystem</span></div>
+  </div>
+  <div class="ct-row">
+    <div class="ct-action">File change on disk</div>
+    <div class="ct-call">chokidar detects change → varlock load (auto)</div>
+    <div class="ct-who"><span class="who-ui">Your UI</span> + <span class="who-vl">Varlock</span></div>
+  </div>
+</div>
+
+<div class="section-label" style="margin-top:4px">Rules for staying decoupled</div>
+<div class="rules">
+  <div class="rule rule-do">
+    <p>Do</p>
+    Parse varlock's JSON output as your data model. If varlock adds a new field to its JSON, your UI gets it for free. Treat the JSON schema as the contract.
+  </div>
+  <div class="rule rule-dont">
+    <p>Don't</p>
+    Parse varlock's human-readable terminal output with regex. That format can change in any release and will break silently.
+  </div>
+  <div class="rule rule-do">
+    <p>Do</p>
+    Use --cwd flag to point varlock at the correct project directory. This means one varlock installation serves all projects your UI manages.
+  </div>
+  <div class="rule rule-dont">
+    <p>Don't</p>
+    Reimplement type validation, secret resolution, or env merging logic in your UI. If Varlock adds a new type or plugin, you'd have to update your code too.
+  </div>
+  <div class="rule rule-do">
+    <p>Do</p>
+    Version-check varlock on startup (varlock --version) and warn the user if it's below your minimum supported version.
+  </div>
+  <div class="rule rule-dont">
+    <p>Don't</p>
+    Depend on varlock being installed globally. Bundle a specific varlock version with your app, or auto-install it if missing, so users don't hit "command not found."
+  </div>
+</div>
+
+</div>

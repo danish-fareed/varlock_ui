@@ -1,0 +1,144 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);font-size:13px;color:var(--color-text-primary)}
+.app{display:grid;grid-template-columns:220px 1fr;min-height:580px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-lg);overflow:hidden;background:var(--color-background-primary)}
+.sidebar{background:var(--color-background-secondary);border-right:0.5px solid var(--color-border-tertiary);display:flex;flex-direction:column;padding:14px}
+.sidebar h4{font-size:11px;font-weight:500;color:var(--color-text-tertiary);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px}
+.env-pick{display:flex;flex-direction:column;gap:6px;margin-bottom:18px}
+.ep-item{padding:9px 11px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);cursor:pointer;transition:all .12s}
+.ep-item:hover{border-color:#534AB7;background:#EEEDFE20}
+.ep-item.chosen{border-color:#534AB7;border-width:1.5px;background:#EEEDFE}
+.ep-name{font-size:13px;font-weight:500}
+.ep-badge{font-size:10px;font-weight:500;padding:2px 7px;border-radius:20px;display:inline-block;margin-top:3px}
+.eb-dev{background:#E1F5EE;color:#0F6E56}
+.eb-prod{background:#FCEBEB;color:#A32D2D}
+.eb-test{background:#FAEEDA;color:#633806}
+.cmd-section{margin-bottom:18px}
+.cmd-input-wrap{display:flex;align-items:center;gap:6px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:7px 10px;background:var(--color-background-primary);margin-bottom:8px}
+.cmd-prefix{font-family:var(--font-mono);font-size:12px;color:var(--color-text-tertiary)}
+.cmd-input{font-family:var(--font-mono);font-size:12px;border:none;background:transparent;color:var(--color-text-primary);outline:none;width:100%}
+.saved-runs{display:flex;flex-direction:column;gap:5px}
+.saved-run{padding:6px 10px;border-radius:var(--border-radius-md);cursor:pointer;font-size:12px;color:var(--color-text-secondary);border:0.5px solid var(--color-border-tertiary);background:transparent}
+.saved-run:hover{background:var(--color-background-primary);color:var(--color-text-primary)}
+.launch-btn{width:100%;padding:8px;background:#534AB7;color:#EEEDFE;border:none;border-radius:var(--border-radius-md);cursor:pointer;font-size:13px;font-weight:500;margin-top:8px}
+.launch-btn:hover{background:#3C3489}
+.main{display:flex;flex-direction:column}
+.term-topbar{display:flex;align-items:center;padding:10px 14px;border-bottom:0.5px solid var(--color-border-tertiary);gap:10px}
+.term-tabs{display:flex;gap:0}
+.term-tab{padding:5px 14px;font-size:12px;border:0.5px solid var(--color-border-tertiary);cursor:pointer;color:var(--color-text-secondary);background:transparent}
+.term-tab:first-child{border-radius:var(--border-radius-md) 0 0 var(--border-radius-md)}
+.term-tab:last-child{border-radius:0 var(--border-radius-md) var(--border-radius-md) 0}
+.term-tab.active{background:#534AB7;color:#EEEDFE;border-color:#534AB7}
+.term-env-badge{font-size:11px;font-weight:500;padding:3px 9px;border-radius:20px;background:#E1F5EE;color:#0F6E56}
+.term-status{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--color-text-secondary)}
+.running-dot{width:6px;height:6px;border-radius:50%;background:#639922}
+.term-body{flex:1;background:#1a1a18;padding:14px;overflow:auto;font-family:var(--font-mono);font-size:12px;line-height:1.7}
+.t-dim{color:#666}
+.t-green{color:#97C459}
+.t-purple{color:#AFA9EC}
+.t-amber{color:#EF9F27}
+.t-red{color:#F09595}
+.t-white{color:#e8e6df}
+.t-blue{color:#85B7EB}
+.t-mask{color:#534AB7;background:#26215C;padding:0 4px;border-radius:3px}
+.cursor{display:inline-block;width:8px;height:14px;background:#97C459;vertical-align:middle;animation:blink 1s step-end infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.val-bar{display:flex;align-items:center;padding:10px 14px;background:var(--color-background-secondary);border-top:0.5px solid var(--color-border-tertiary);gap:10px;flex-wrap:wrap}
+.val-item{display:flex;align-items:center;gap:5px;font-size:11px}
+.val-dot{width:6px;height:6px;border-radius:50%}
+.vd-ok{background:#639922}
+.vd-err{background:#E24B4A}
+.vd-secret{background:#534AB7}
+</style>
+<div class="app">
+  <div class="sidebar">
+    <h4>Environment</h4>
+    <div class="env-pick">
+      <div class="ep-item chosen">
+        <div class="ep-name">.env.development</div>
+        <span class="ep-badge eb-dev">development</span>
+      </div>
+      <div class="ep-item" onclick="sendPrompt('Show me a production environment safety warning modal before launching terminal with prod env')">
+        <div class="ep-name">.env.production</div>
+        <span class="ep-badge eb-prod">production</span>
+      </div>
+      <div class="ep-item">
+        <div class="ep-name">.env.test</div>
+        <span class="ep-badge eb-test">test</span>
+      </div>
+    </div>
+
+    <h4>Command</h4>
+    <div class="cmd-section">
+      <div class="cmd-input-wrap">
+        <span class="cmd-prefix">$</span>
+        <input class="cmd-input" value="npm run dev" id="cmdInput"/>
+      </div>
+      <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:8px">Saved runs</div>
+      <div class="saved-runs">
+        <div class="saved-run" onclick="document.getElementById('cmdInput').value='npm run dev'">npm run dev</div>
+        <div class="saved-run" onclick="document.getElementById('cmdInput').value='python manage.py migrate'">python manage.py migrate</div>
+        <div class="saved-run" onclick="document.getElementById('cmdInput').value='npm test'">npm test</div>
+        <div class="saved-run" onclick="sendPrompt('Show me the add new saved run configuration dialog')">+ Add run config</div>
+      </div>
+      <button class="launch-btn">Launch terminal</button>
+    </div>
+
+    <div style="margin-top:auto;padding-top:12px;border-top:0.5px solid var(--color-border-tertiary)">
+      <div style="font-size:11px;color:var(--color-text-tertiary);margin-bottom:6px">Running as</div>
+      <div style="font-size:12px;font-weight:500">varlock run -- npm run dev</div>
+      <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:2px">with development env</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="term-topbar">
+      <div class="term-tabs">
+        <div class="term-tab active">Terminal 1</div>
+        <div class="term-tab">Terminal 2</div>
+        <div class="term-tab" onclick="sendPrompt('Show the new terminal tab being opened')">+</div>
+      </div>
+      <span class="term-env-badge">development</span>
+      <div class="term-status">
+        <div class="running-dot"></div>
+        running
+      </div>
+    </div>
+
+    <div class="term-body">
+      <div><span class="t-dim">$</span> <span class="t-white">varlock run -- npm run dev</span></div>
+      <div style="margin-top:6px"><span class="t-purple">varlock</span> <span class="t-dim">v0.9.1 — loading .env.schema</span></div>
+      <div><span class="t-dim">  environment:</span> <span class="t-green">development</span></div>
+      <div><span class="t-dim">  files loaded:</span> <span class="t-white">.env.schema → .env.development → .env.local</span></div>
+      <div style="margin-top:6px"><span class="t-purple">varlock</span> <span class="t-dim">resolving secrets...</span></div>
+      <div><span class="t-dim">  OPENAI_API_KEY</span> <span class="t-dim">← 1Password</span> <span class="t-green">✓ resolved</span></div>
+      <div><span class="t-dim">  STRIPE_SECRET</span> <span class="t-dim">← 1Password</span> <span class="t-green">✓ resolved</span></div>
+      <div style="margin-top:6px"><span class="t-purple">varlock</span> <span class="t-dim">validating 14 variables...</span></div>
+      <div><span class="t-green">  ✓ 13 valid</span> <span class="t-amber">  ⚠ 1 warning (DATABASE_URL — optional in dev)</span></div>
+      <div style="margin-top:6px"><span class="t-purple">varlock</span> <span class="t-green">environment ready — launching process</span></div>
+      <div style="margin-top:10px;border-top:1px solid #2a2a28;padding-top:10px">
+        <div><span class="t-dim">&gt;</span> <span class="t-white">my-saas-app@1.0.0 dev</span></div>
+        <div><span class="t-dim">&gt;</span> <span class="t-white">next dev</span></div>
+        <div style="margin-top:6px"><span class="t-dim">  ▲ Next.js 14.2.0</span></div>
+        <div><span class="t-dim">  - Local:</span>        <span class="t-blue">http://localhost:3000</span></div>
+        <div><span class="t-dim">  - Network:</span>       <span class="t-blue">http://192.168.1.42:3000</span></div>
+        <div style="margin-top:6px"><span class="t-green">  ✓ Ready</span> <span class="t-dim">in 1842ms</span></div>
+        <div style="margin-top:6px"><span class="t-dim">  ○ Compiling / ...</span></div>
+        <div><span class="t-green">  ✓ Compiled</span> <span class="t-dim">/ in 2.1s (412 modules)</span></div>
+        <div style="margin-top:8px"><span class="t-white"><span class="cursor"></span></span></div>
+      </div>
+    </div>
+
+    <div class="val-bar">
+      <span style="font-size:11px;color:var(--color-text-tertiary);margin-right:4px">14 vars:</span>
+      <div class="val-item"><div class="val-dot vd-ok"></div><span style="color:var(--color-text-secondary)">13 valid</span></div>
+      <div class="val-item"><div class="val-dot vd-secret"></div><span style="color:var(--color-text-secondary)">3 secrets resolved</span></div>
+      <div class="val-item"><div class="val-dot vd-err"></div><span style="color:var(--color-text-secondary)">1 warning</span></div>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button style="font-size:11px;padding:3px 10px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;cursor:pointer;color:var(--color-text-secondary)" onclick="sendPrompt('Show the full validation results panel — all 14 variables with their resolved masked values and status')">View all vars</button>
+        <button style="font-size:11px;padding:3px 10px;border:0.5px solid var(--color-border-danger);border-radius:var(--border-radius-md);background:transparent;cursor:pointer;color:var(--color-text-danger)">Stop process</button>
+      </div>
+    </div>
+  </div>
+</div>
