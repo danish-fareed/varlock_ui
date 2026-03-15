@@ -1,28 +1,29 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { useProjectStore } from "@/stores/projectStore";
-import { useSettingsStore } from "@/stores/settingsStore";
-import { EnvironmentCards } from "@/components/environment/EnvironmentCards";
+import { useCommandStore } from "@/stores/commandStore";
+import { useEnvironmentStore } from "@/stores/environmentStore";
+import { useFileWatcher } from "@/hooks/useFileWatcher";
 import { VariableList } from "@/components/variables/VariableList";
-import { TerminalPanel } from "@/components/terminal/TerminalPanel";
 import { MigrationWizard } from "@/components/migration/MigrationWizard";
 import { ScanResultsPanel } from "@/components/scan/ScanResultsPanel";
 import { DashboardPage } from "@/components/dashboard/DashboardPage";
 import { VaultPage } from "@/components/vault/VaultPage";
+import { CommandGrid } from "@/components/commands/CommandGrid";
+import { EnvSelectorBar } from "@/components/commands/EnvSelectorBar";
 import { useScanStore } from "@/stores/scanStore";
 
 /**
- * Root layout — two-tier sidebar + main content + resizable terminal bottom pane.
+ * Root layout — sidebar + main content.
  *
  * Views:
- *   dashboard — project env cards + variable list (or global project list if none selected)
- *   vault     — vault overview + tools (import, generator, AI context, team sync)
+ *   dashboard — command grid + env selector (or global project list if none selected)
+ *   vault     — vault overview + tools
  */
 export function AppLayout() {
   const { activeProject, view } = useProjectStore();
   const showScanResults = useScanStore((s) => s.showResults);
-  const { terminalOpen } = useSettingsStore();
 
   return (
     <div className="h-screen w-screen flex overflow-hidden bg-surface-secondary text-text">
@@ -34,80 +35,22 @@ export function AppLayout() {
         {/* TopBar — hidden on vault page */}
         {view !== "vault" && <TopBar />}
 
-        {/* Content + terminal split */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Main content */}
-          <div className="flex-1 overflow-auto" style={{ minHeight: 200 }}>
-            {view === "vault" ? (
-              <VaultPage />
-            ) : activeProject ? (
-              activeProject.status === "migrationNeeded" ? (
-                <MigrationWizard />
-              ) : showScanResults ? (
-                <ScanResultsPanel />
-              ) : (
-                <DashboardView />
-              )
+        {/* Main content */}
+        <div className="flex-1 overflow-auto">
+          {view === "vault" ? (
+            <VaultPage />
+          ) : activeProject ? (
+            activeProject.status === "migrationNeeded" ? (
+              <MigrationWizard />
+            ) : showScanResults ? (
+              <ScanResultsPanel />
             ) : (
-              <DashboardPage />
-            )}
-          </div>
-
-          {/* Terminal bottom pane — available when a project is active */}
-          {terminalOpen && activeProject && activeProject.status !== "migrationNeeded" && (
-            <TerminalPane />
+              <DashboardView />
+            )
+          ) : (
+            <DashboardPage />
           )}
         </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Terminal bottom pane with drag-to-resize ──
-
-function TerminalPane() {
-  const [height, setHeight] = useState(260);
-  const isDragging = useRef(false);
-  const startY = useRef(0);
-  const startH = useRef(0);
-
-  const MIN_HEIGHT = 120;
-  const MAX_HEIGHT = 500;
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    isDragging.current = true;
-    startY.current = e.clientY;
-    startH.current = height;
-
-    const onMouseMove = (ev: MouseEvent) => {
-      if (!isDragging.current) return;
-      const delta = startY.current - ev.clientY;
-      const next = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, startH.current + delta));
-      setHeight(next);
-    };
-
-    const onMouseUp = () => {
-      isDragging.current = false;
-      document.removeEventListener("mousemove", onMouseMove);
-      document.removeEventListener("mouseup", onMouseUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onMouseUp);
-    document.body.style.cursor = "row-resize";
-    document.body.style.userSelect = "none";
-  }, [height]);
-
-  return (
-    <div className="flex flex-col shrink-0 border-t border-border-light" style={{ height }}>
-      <div
-        className="h-1 bg-transparent hover:bg-accent/30 cursor-row-resize shrink-0 transition-colors"
-        onMouseDown={handleMouseDown}
-      />
-      <div className="flex-1 overflow-hidden">
-        <TerminalPanel />
       </div>
     </div>
   );
@@ -116,11 +59,85 @@ function TerminalPane() {
 // ── Dashboard view (Project-scoped) ──
 
 function DashboardView() {
+  const { activeProject } = useProjectStore();
+  const { scanProject, scan, reset } = useCommandStore();
+  const { loadEnvironment } = useEnvironmentStore();
+  const [showEnvView, setShowEnvView] = useState(false);
+
+  // Watch for file changes
+  useFileWatcher(activeProject?.id, activeProject?.path);
+
+  // Scan project for commands when active project changes
+  useEffect(() => {
+    if (activeProject?.path) {
+      scanProject(activeProject.path);
+      loadEnvironment(activeProject.path);
+    } else {
+      reset();
+    }
+  }, [activeProject?.path, activeProject?.id]);
+
   return (
-    <div className="flex-1 overflow-auto p-6 flex flex-col gap-6 bg-surface">
-      <EnvironmentCards />
-      <div className="h-px bg-border-light" />
-      <VariableList />
+    <div className="flex-1 overflow-auto p-5 flex flex-col gap-4 bg-surface">
+      {/* Tech stack pills */}
+      {scan?.techStack && scan.techStack.length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {scan.techStack.map((tech) => (
+            <span
+              key={tech}
+              className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                tech === "varlock"
+                  ? "bg-accent-light text-accent"
+                  : tech.includes("Next") || tech.includes("React") || tech.includes("Vue")
+                    ? "bg-[#E6F1FB] text-[#0C447C]"
+                    : tech.includes("Python") || tech.includes("Django") || tech.includes("Flask") || tech.includes("FastAPI")
+                      ? "bg-[#E1F5EE] text-[#085041]"
+                      : tech === "Docker"
+                        ? "bg-[#E6F1FB] text-[#185FA5]"
+                        : tech === "Rust"
+                          ? "bg-[#FAECE7] text-[#993C1D]"
+                          : "bg-surface-tertiary text-text-secondary"
+              }`}
+            >
+              {tech}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Env selector bar */}
+      <EnvSelectorBar />
+
+      {/* View toggle */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setShowEnvView(false)}
+          className={`text-[11px] font-medium px-3 py-1 rounded-md cursor-pointer border-none transition-colors ${
+            !showEnvView
+              ? "bg-accent text-white"
+              : "bg-transparent text-text-secondary hover:bg-surface-secondary"
+          }`}
+        >
+          Commands
+        </button>
+        <button
+          onClick={() => setShowEnvView(true)}
+          className={`text-[11px] font-medium px-3 py-1 rounded-md cursor-pointer border-none transition-colors ${
+            showEnvView
+              ? "bg-accent text-white"
+              : "bg-transparent text-text-secondary hover:bg-surface-secondary"
+          }`}
+        >
+          Variables
+        </button>
+      </div>
+
+      {/* Content */}
+      {showEnvView ? (
+        <VariableList />
+      ) : (
+        <CommandGrid />
+      )}
     </div>
   );
 }

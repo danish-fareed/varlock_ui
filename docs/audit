@@ -1,0 +1,136 @@
+# Extended Security Audit — Varlock UI
+
+## Assessment of Existing Report
+
+The existing [security_report.md](file:///D:/github/varlock_ui/security_report.md) is **solid and accurate**. Its 5 findings are all valid. The cryptographic stack itself (Argon2id → HKDF → XChaCha20-Poly1305, DEK/KEK model) follows modern best practices. The report correctly identifies memory-hygiene and defense-in-depth gaps.
+
+**However**, it only reviewed the crypto and vault layers. After auditing the full codebase — including the database, commands, process execution, filesystem, terminal, keyring, and Tauri config — I found **9 additional flaws** ranging from critical to informational.
+
+---
+
+## New Findings (Beyond Original Report)
+
+### 6. CSP Completely Disabled (High)
+
+> [!CAUTION]
+> `tauri.conf.json` sets `"csp": null`, which **disables Content Security Policy entirely**.
+
+- **File**: [tauri.conf.json](file:///D:/github/varlock_ui/src-tauri/tauri.conf.json#L25-L27)
+- **Issue**: Without a CSP, if any XSS vector is found in the webview, an attacker can execute arbitrary JavaScript, call Tauri `invoke()` commands, and exfiltrate every decrypted secret from the vault.
+- **Recommendation**: Set a strict CSP, at minimum: `"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"`. This is Tauri's **#1 recommended hardening step**.
+
+---
+
+### 7. Modular Bias in Secret Generation (Medium)
+
+> [!WARNING]
+> `generate_from_charset()` in `crypto.rs` uses `byte % charset.len()` to select characters.
+
+- **File**: [crypto.rs](file:///D:/github/varlock_ui/src-tauri/src/vault/crypto.rs#L330-L341)
+- **Issue**: When a random `u8` (0–255) is reduced modulo a charset length that doesn't divide 256 evenly (e.g., 62 for alphanumeric, 76 for password), some characters are slightly more likely than others. For the 62-char alphanumeric set: characters 0–5 appear with probability 5/256 vs 4/256 for the rest — a ~25% relative bias.
+- **Impact**: Reduces effective entropy of generated passwords/secrets by ~0.3–0.5 bits per character. For a 24-char password, this could reduce entropy from ~142 bits to ~135 bits.
+- **Recommendation**: Use rejection sampling: discard random bytes ≥ `256 - (256 % charset.len())`, or use the `rand` crate's `Uniform` distribution.
+
+---
+
+### 8. Auto-Unlock Skips DEK Validation (High)
+
+> [!CAUTION]
+> `vault_auto_unlock` retrieves the raw DEK from the OS keychain and uses it **without verifying it can actually decrypt anything**.
+
+- **File**: [vault.rs](file:///D:/github/varlock_ui/src-tauri/src/commands/vault.rs#L64-L85)
+- **Issue**: The only check is `vault.is_initialized()`, which just counts rows in `vault_header` — it doesn't verify the DEK is correct. If the DEK in the keychain is corrupted or from a different vault instance, the app will silently accept it. All subsequent encrypt/decrypt operations will produce garbage or fail cryptically.
+- **Recommendation**: After retrieving the cached DEK, perform a trial decryption (e.g., decrypt and re-encrypt the protected DEK, or decrypt a known canary value) to confirm the key is valid before storing it in state.
+
+---
+
+### 9. Plaintext Key Names in Audit Log (Medium)
+
+> [!WARNING]
+> The audit log stores variable key names (`key TEXT`) in **unencrypted plaintext**.
+
+- **File**: [vault_db.rs](file:///D:/github/varlock_ui/src-tauri/src/vault/vault_db.rs#L416-L421) and [audit.rs](file:///D:/github/varlock_ui/src-tauri/src/vault/audit.rs)
+- **Issue**: The main `variables` table correctly hashes key names with SHA-256 for metadata protection. But the `access_log` table stores the raw key name in plain text (e.g., `"API_KEY"`, `"DATABASE_URL"`). An attacker with DB file access can enumerate all variable names ever accessed.
+- **Recommendation**: Either hash the key name in audit logs using the same `key_hash()` function, or encrypt the entire audit log, or make the `key` column store the hash instead.
+
+---
+
+### 10. Unrestricted `read_env_file` / `write_env_file` — Path Traversal (High)
+
+> [!CAUTION]
+> The `read_env_file` and `write_env_file` commands accept an **absolute path** with no restrictions.
+
+- **File**: [filesystem.rs](file:///D:/github/varlock_ui/src-tauri/src/commands/filesystem.rs#L87-L102)
+- **Issue**: Unlike `read_project_file`/`write_project_file` (which validate that the relative path is a `.env*` file in the project root), these two commands accept any path string. A compromised or malicious frontend could read/write **any file** on the user's filesystem that the process has access to, including `~/.ssh/id_rsa`, `~/.bashrc`, etc. This is essentially an arbitrary file read/write primitive.
+- **Recommendation**: Either remove these commands (the `read_project_file`/`write_project_file` pair already exists with proper validation), or add the same path validation — restrict to known project directories and `.env*` filenames.
+
+---
+
+### 11. Command Injection via `direct_run` and `run_in_terminal` (Medium)
+
+> [!WARNING]
+> `direct_run` and `run_in_terminal` pass user-controlled `command` strings directly to a shell.
+
+- **Files**: [process.rs](file:///D:/github/varlock_ui/src-tauri/src/commands/process.rs#L163-L186) and [terminal_attach.rs](file:///D:/github/varlock_ui/src-tauri/src/commands/terminal_attach.rs#L184-L215)
+- **Issue**: `direct_run` does `cmd /C <command>` (or `sh -c <command>`), and `run_in_terminal` embeds the command string into `cd /d "..." && <command>`. If the frontend is compromised (see Finding #6 — no CSP), these become a direct OS command injection vector. Even without XSS, the `cwd` parameter in `run_in_terminal_windows` is interpolated into a command string with `format!()`, not properly escaped.
+- **Recommendation**: If these commands must exist, add an allowlist of permitted commands, or at minimum sanitize the `cwd` parameter. Consider using `--` separators where applicable.
+
+---
+
+### 12. No Password Strength Policy (Low)
+
+> [!IMPORTANT]
+> `vault_setup` accepts any non-empty password, including `""` (empty), `"1"`, etc.
+
+- **File**: [vault.rs](file:///D:/github/varlock_ui/src-tauri/src/commands/vault.rs#L36-L41)
+- **Issue**: A weak master password completely undermines the Argon2id KDF. A 1-character password can be brute-forced in milliseconds regardless of Argon2id tuning.
+- **Recommendation**: Enforce a minimum password length (e.g., 12 characters) and optionally check against common passwords. Validate on the backend, not just the frontend.
+
+---
+
+### 13. Keyring Stores Raw DEK (Medium)
+
+> [!WARNING]
+> The "Remember Me" feature stores the raw **DEK bytes** in the OS keyring — not the password or a derived credential.
+
+- **File**: [vault.rs](file:///D:/github/varlock_ui/src-tauri/src/commands/vault.rs#L52-L55)
+- **Issue**: If the OS keychain is compromised (e.g., via malware with credential-store access), the attacker gets the DEK directly — they can decrypt **all** vault data without ever needing the user's password. The password itself, the Argon2id KDF, and the KEK are all bypassed entirely.
+- **Recommendation**: Instead of storing the DEK, store the master password (or a secondary credential) and re-derive the DEK on auto-unlock. This way, the Argon2id cost still provides a speed bump even if the keyring is compromised.
+
+---
+
+### 14. No Database File Permission Enforcement (Low)
+
+> [!NOTE]
+> The `vault.db` file is created with default OS permissions.
+
+- **File**: [vault_db.rs](file:///D:/github/varlock_ui/src-tauri/src/vault/vault_db.rs#L63-L81)
+- **Issue**: On Linux/macOS, new files inherit umask permissions. The vault database could be world-readable (`644`), allowing other users on the system to copy the encrypted DB file. Combined with a weak master password (Finding #12), this could lead to offline brute-force.
+- **Recommendation**: On Unix, set the file permissions to `600` (owner read/write only) after creation. On Windows, consider restricting ACLs.
+
+---
+
+## Summary Table
+
+| # | Finding | Severity | Source File | Original Report? |
+|---|---------|----------|-------------|:-:|
+| 1 | Password lingering in memory | Low/Med | `vault.rs` | ✅ |
+| 2 | IPC boundary security | Low | Architecture | ✅ |
+| 3 | Database metadata leakage | Low | `vault_db.rs` | ✅ |
+| 4 | Custom Base64 encoding | Info | `crypto.rs`, `keyring.rs` | ✅ |
+| 5 | HashMap secret storage | Low | `resolver.rs` | ✅ |
+| **6** | **CSP completely disabled** | **High** | `tauri.conf.json` | ❌ **NEW** |
+| **7** | **Modular bias in secret gen** | **Medium** | `crypto.rs` | ❌ **NEW** |
+| **8** | **Auto-unlock skips DEK validation** | **High** | `vault.rs` | ❌ **NEW** |
+| **9** | **Plaintext keys in audit log** | **Medium** | `vault_db.rs`, `audit.rs` | ❌ **NEW** |
+| **10** | **Unrestricted file read/write** | **High** | `filesystem.rs` | ❌ **NEW** |
+| **11** | **Shell command injection surface** | **Medium** | `process.rs`, `terminal_attach.rs` | ❌ **NEW** |
+| **12** | **No password strength policy** | **Low** | `vault.rs` | ❌ **NEW** |
+| **13** | **Keyring stores raw DEK** | **Medium** | `vault.rs`, `keyring.rs` | ❌ **NEW** |
+| **14** | **No DB file permission enforcement** | **Low** | `vault_db.rs` | ❌ **NEW** |
+
+## Priority Fixes
+
+1. **Immediate**: Enable CSP (#6) and restrict `read_env_file`/`write_env_file` (#10) — these are the highest-impact changes with the least effort.
+2. **Short-term**: Fix auto-unlock validation (#8), hash audit log keys (#9), add password policy (#12).
+3. **Medium-term**: Fix modular bias (#7), reconsider keyring strategy (#13), add file permissions (#14), evaluate command injection surface (#11).

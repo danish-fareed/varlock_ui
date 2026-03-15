@@ -81,7 +81,48 @@ export interface TerminalSession {
 
 // ── UI view state ──
 
-export type AppView = "dashboard" | "vault";
+export type AppView = "dashboard" | "vault" | "commands";
+
+// ── Command discovery types ──
+
+export type CommandCategory =
+  | "dev-server"
+  | "build"
+  | "test"
+  | "database"
+  | "code-quality"
+  | "deploy"
+  | "docker"
+  | "custom"
+  | "other";
+
+export interface DiscoveredCommand {
+  id: string;
+  name: string;
+  rawCmd: string;
+  sourceFile: string;
+  category: CommandCategory;
+  isCustom: boolean;
+  sortOrder: number;
+}
+
+export interface ProjectScan {
+  commands: DiscoveredCommand[];
+  techStack: string[];
+  hasVarlock: boolean;
+  envTier: string;
+  envFiles: string[];
+}
+
+export interface RunningCommandInfo {
+  commandId: string;
+  sessionId: string;
+  status: "running" | "error" | "stopped";
+  startedAt: number;
+  envName: string;
+  logPeek: string[];
+  exitCode?: number | null;
+}
 
 // ── Vault types ──
 

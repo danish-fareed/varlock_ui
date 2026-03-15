@@ -1,9 +1,11 @@
 import { useProjectStore } from "@/stores/projectStore";
 import { useSettingsStore } from "@/stores/settingsStore";
+import { useCommandStore } from "@/stores/commandStore";
 import { ProjectList } from "@/components/project/ProjectList";
 import { AddProjectDialog } from "@/components/project/AddProjectDialog";
 import { useState } from "react";
 import type { AppView } from "@/lib/types";
+import * as commands from "@/lib/commands";
 
 /**
  * macOS Finder-style collapsible sidebar.
@@ -13,6 +15,7 @@ export function Sidebar() {
   const projects = useProjectStore((s) => s.projects);
   const { view, setView } = useProjectStore();
   const { sidebarCollapsed, toggleSidebar } = useSettingsStore();
+  const running = useCommandStore((s) => s.running);
   const [showAddDialog, setShowAddDialog] = useState(false);
 
   const navItems: { id: AppView; label: string; icon: React.ReactNode }[] = [
@@ -192,10 +195,67 @@ export function Sidebar() {
         </button>
       </div>
 
+      {/* Running now section */}
+      <RunningSection running={running} />
+
       {/* Add project dialog */}
       {showAddDialog && (
         <AddProjectDialog onClose={() => setShowAddDialog(false)} />
       )}
+    </div>
+  );
+}
+
+// ── Running Processes Section ──
+
+import type { RunningCommandInfo } from "@/lib/types";
+
+function RunningSection({ running }: { running: Record<string, RunningCommandInfo> }) {
+  const runningEntries = Object.values(running).filter((r) => r.status === "running");
+  const { activeProject } = useProjectStore();
+
+  if (runningEntries.length === 0) return null;
+
+  return (
+    <div className="px-2 pb-2">
+      <div className="px-2 pt-2 pb-1">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-medium text-text-muted uppercase tracking-wider">
+            Running now
+          </span>
+          <span className="text-[10px] text-success-dark tabular-nums">
+            {runningEntries.length}
+          </span>
+        </div>
+      </div>
+      <div className="flex flex-col gap-0.5">
+        {runningEntries.map((entry) => (
+          <div
+            key={entry.commandId}
+            className="flex items-center gap-2 py-1.5 px-2.5 rounded-md hover:bg-sidebar-hover transition-colors group cursor-default"
+          >
+            <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse-soft shrink-0" />
+            <span className="text-[11px] text-text truncate flex-1">
+              {entry.commandId.split(":").pop() || entry.commandId}
+            </span>
+            <button
+              onClick={() => {
+                if (activeProject?.path) {
+                  commands.openTerminalAt(activeProject.path);
+                }
+              }}
+              className="w-5 h-5 rounded flex items-center justify-center text-text-muted opacity-0 group-hover:opacity-100 hover:text-text hover:bg-sidebar-active transition-all cursor-pointer bg-transparent border-none shrink-0"
+              title="Open terminal"
+            >
+              <svg width="9" height="9" viewBox="0 0 11 11" fill="none">
+                <rect x="0.5" y="1" width="10" height="9" rx="1.5" stroke="currentColor" strokeWidth="0.8" />
+                <path d="M2 4l2 2-2 2" stroke="currentColor" strokeWidth="0.9" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M5.5 8h3" stroke="currentColor" strokeWidth="0.9" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

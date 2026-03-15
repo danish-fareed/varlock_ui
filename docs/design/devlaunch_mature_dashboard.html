@@ -1,0 +1,429 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);font-size:13px;color:var(--color-text-primary);background:transparent}
+
+.shell{display:grid;grid-template-rows:auto 1fr auto;min-height:720px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-lg);overflow:hidden;background:var(--color-background-primary)}
+
+.titlebar{height:36px;background:var(--color-background-secondary);border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;padding:0 14px;gap:8px}
+.tb-dots{display:flex;gap:5px}
+.tb-dot{width:10px;height:10px;border-radius:50%}
+.tbd-r{background:#E24B4A}.tbd-y{background:#EF9F27}.tbd-g{background:#639922}
+.tb-title{font-size:12px;color:var(--color-text-tertiary);margin:0 auto}
+.tb-right{display:flex;align-items:center;gap:8px;margin-left:auto}
+.tb-health{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--color-text-secondary)}
+.health-dot{width:6px;height:6px;border-radius:50%;background:#639922}
+.tb-btn{padding:3px 10px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;font-size:11px;cursor:pointer;color:var(--color-text-secondary)}
+.tb-btn:hover{background:var(--color-background-primary)}
+
+.body{display:grid;grid-template-columns:220px 1fr;overflow:hidden}
+
+.sidebar{background:var(--color-background-secondary);border-right:0.5px solid var(--color-border-tertiary);display:flex;flex-direction:column;overflow:hidden}
+.sb-header{padding:12px 14px 10px;border-bottom:0.5px solid var(--color-border-tertiary)}
+.brand{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500}
+.brand-icon{width:24px;height:24px;border-radius:7px;background:#534AB7;display:flex;align-items:center;justify-content:center}
+.brand-icon svg{width:13px;height:13px}
+.sb-scroll{flex:1;overflow-y:auto}
+.sb-section{font-size:10px;font-weight:500;color:var(--color-text-tertiary);letter-spacing:.07em;text-transform:uppercase;padding:10px 14px 5px}
+
+.proj-row{padding:6px 14px;display:flex;align-items:center;gap:8px;cursor:pointer;transition:background .1s}
+.proj-row:hover{background:var(--color-background-primary)}
+.proj-row.active{background:var(--color-background-primary);border-right:2px solid #534AB7}
+.pa{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0}
+.pi{flex:1;overflow:hidden}
+.pi-name{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pi-sub{font-size:10px;color:var(--color-text-tertiary)}
+.pi-count{font-size:10px;padding:1px 6px;border-radius:20px;font-weight:500;flex-shrink:0}
+
+.proc-group{padding:0 10px 8px}
+.proc-mini{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:var(--border-radius-md);cursor:pointer;transition:background .1s}
+.proc-mini:hover{background:var(--color-background-primary)}
+.pm-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.pm-dot-run{background:#639922}
+.pm-dot-err{background:#E24B4A}
+.pm-info{flex:1;overflow:hidden}
+.pm-name{font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pm-env{font-size:10px;color:var(--color-text-tertiary)}
+.pm-time{font-size:10px;font-family:var(--font-mono);color:var(--color-text-tertiary);flex-shrink:0}
+.pm-term{width:18px;height:18px;border-radius:4px;border:0.5px solid var(--color-border-secondary);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer}
+.pm-term:hover{background:var(--color-background-primary);border-color:var(--color-border-secondary)}
+
+.sb-bottom{border-top:0.5px solid var(--color-border-tertiary);padding:10px 14px;display:flex;flex-direction:column;gap:6px}
+.add-btn{width:100%;padding:6px;border:0.5px dashed var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;cursor:pointer;font-size:11px;color:var(--color-text-tertiary);display:flex;align-items:center;justify-content:center;gap:4px}
+.add-btn:hover{color:var(--color-text-primary);border-color:#534AB7}
+
+.main{display:flex;flex-direction:column;overflow:hidden}
+.main-header{padding:14px 18px 12px;border-bottom:0.5px solid var(--color-border-tertiary)}
+.mh-top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.proj-name-big{font-size:17px;font-weight:500}
+.tech-stack{display:flex;gap:5px}
+.ts-pill{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500}
+.ts-nextjs{background:#E6F1FB;color:#0C447C}
+.ts-node{background:#E1F5EE;color:#085041}
+.ts-docker{background:#E6F1FB;color:#185FA5}
+.ts-varlock{background:#EEEDFE;color:#3C3489}
+.ts-git{background:#F1EFE8;color:#444441}
+.mh-env-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md)}
+.env-label{font-size:11px;color:var(--color-text-tertiary)}
+.env-selector{display:flex;align-items:center;gap:6px;cursor:pointer;padding:3px 8px;border:0.5px solid var(--color-border-secondary);border-radius:20px;background:var(--color-background-primary);transition:border-color .1s}
+.env-selector:hover{border-color:#534AB7}
+.env-sel-dot{width:6px;height:6px;border-radius:50%}
+.env-sel-name{font-size:11px;font-weight:500}
+.env-chevron{width:10px;height:10px;opacity:0.5}
+.env-meta{font-size:11px;color:var(--color-text-secondary);margin-left:4px}
+.env-warn{font-size:11px;color:#BA7517;margin-left:auto;display:flex;align-items:center;gap:4px;cursor:pointer}
+.env-warn-dot{width:5px;height:5px;border-radius:50%;background:#BA7517}
+.env-actions{display:flex;gap:6px;margin-left:auto}
+.ea-btn{font-size:11px;padding:3px 10px;border:0.5px solid var(--color-border-secondary);border-radius:20px;background:transparent;cursor:pointer;color:var(--color-text-secondary)}
+.ea-btn:hover{background:var(--color-background-primary)}
+
+.cmd-area{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.section-row{display:flex;align-items:center;justify-content:space-between}
+.sr-label{font-size:10px;font-weight:500;color:var(--color-text-tertiary);letter-spacing:.07em;text-transform:uppercase}
+.sr-source{font-size:10px;color:var(--color-text-tertiary)}
+
+.cmd-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+
+.cmd-card{border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-lg);background:var(--color-background-primary);overflow:hidden;transition:border-color .15s,box-shadow .15s;cursor:default}
+.cmd-card:hover{border-color:var(--color-border-primary)}
+.cmd-card.state-running{border-color:#639922;border-width:1.5px}
+.cmd-card.state-error{border-color:#E24B4A;border-width:1.5px}
+.cmd-card.state-add{border-style:dashed;cursor:pointer;opacity:0.6}
+.cmd-card.state-add:hover{opacity:1;border-color:#534AB7}
+
+.cc-top{padding:10px 12px 6px;display:flex;align-items:flex-start;gap:9px}
+.cc-icon{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cc-meta{flex:1;min-width:0}
+.cc-name{font-size:12px;font-weight:500;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cc-cmd{font-family:var(--font-mono);font-size:10px;color:var(--color-text-tertiary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cc-src{font-size:9px;color:var(--color-text-tertiary);margin-top:1px;opacity:0.7}
+.cc-status{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0}
+.cc-badge{font-size:9px;padding:2px 6px;border-radius:20px;font-weight:500;white-space:nowrap}
+.ccb-run{background:#EAF3DE;color:#27500A}
+.ccb-idle{background:var(--color-background-secondary);color:var(--color-text-tertiary)}
+.ccb-err{background:#FCEBEB;color:#791F1F}
+.cc-uptime{font-size:9px;font-family:var(--font-mono);color:var(--color-text-tertiary)}
+
+.log-peek{background:#1c1c1a;margin:0 12px 8px;border-radius:5px;padding:6px 8px;height:44px;overflow:hidden;font-family:var(--font-mono);font-size:10px;line-height:1.6}
+.lp-g{color:#97C459}.lp-d{color:#444}.lp-w{color:#d4d2cc}.lp-a{color:#EF9F27}.lp-r{color:#F09595}
+
+.cc-footer{padding:4px 12px 10px;display:flex;align-items:center;gap:6px}
+.play-btn{display:flex;align-items:center;gap:4px;padding:5px 12px;border-radius:var(--border-radius-md);border:none;cursor:pointer;font-size:11px;font-weight:500;transition:all .12s;flex-shrink:0}
+.pb-play{background:#534AB7;color:#EEEDFE}
+.pb-play:hover{background:#3C3489}
+.pb-running{background:#EAF3DE;color:#27500A;border:0.5px solid #97C459}
+.pb-error{background:#FCEBEB;color:#A32D2D;border:0.5px solid #F7C1C1}
+.icon-btn{width:26px;height:26px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .1s;flex-shrink:0}
+.icon-btn:hover{background:var(--color-background-secondary)}
+.icon-btn.active-term{border-color:#639922;background:#EAF3DE10}
+.stop-btn{padding:5px 8px;border:0.5px solid #F7C1C1;border-radius:var(--border-radius-md);background:transparent;cursor:pointer;font-size:10px;color:#A32D2D;flex-shrink:0}
+.stop-btn:hover{background:#FCEBEB}
+.cc-env-tag{font-size:9px;padding:1px 6px;border-radius:20px;margin-left:auto;flex-shrink:0;white-space:nowrap}
+.cet-dev{background:#EEEDFE;color:#534AB7}
+.cet-prod{background:#FCEBEB;color:#A32D2D}
+
+.pulse-dot{animation:pulse 1.8s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.statusbar{height:26px;background:var(--color-background-secondary);border-top:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;padding:0 14px;gap:14px}
+.sb-item{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--color-text-tertiary)}
+.sb-dot-g{width:5px;height:5px;border-radius:50%;background:#639922}
+.sb-dot-w{width:5px;height:5px;border-radius:50%;background:#BA7517}
+.sb-sep{width:0.5px;height:12px;background:var(--color-border-tertiary)}
+</style>
+
+<div class="shell">
+  <div class="titlebar">
+    <div class="tb-dots">
+      <div class="tb-dot tbd-r"></div>
+      <div class="tb-dot tbd-y"></div>
+      <div class="tb-dot tbd-g"></div>
+    </div>
+    <div class="tb-title">DevLaunch</div>
+    <div class="tb-right">
+      <div class="tb-health"><div class="health-dot"></div>2 running</div>
+      <button class="tb-btn" onclick="sendPrompt('Show the global settings screen — tmux configuration, default terminal app selection, varlock binary path, theme')">Settings</button>
+    </div>
+  </div>
+
+  <div class="body">
+    <div class="sidebar">
+      <div class="sb-header">
+        <div class="brand">
+          <div class="brand-icon">
+            <svg viewBox="0 0 13 13" fill="none"><path d="M2 10V6l4.5-4 4.5 4v4" stroke="#EEEDFE" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><rect x="4.5" y="7" width="4" height="3" rx="0.5" stroke="#EEEDFE" stroke-width="1"/></svg>
+          </div>
+          DevLaunch
+        </div>
+      </div>
+
+      <div class="sb-scroll">
+        <div class="sb-section">Projects</div>
+
+        <div class="proj-row active">
+          <div class="pa" style="background:#EEEDFE;color:#534AB7">MS</div>
+          <div class="pi">
+            <div class="pi-name">my-saas-app</div>
+            <div class="pi-sub">Next.js · varlock</div>
+          </div>
+          <span class="pi-count" style="background:#EAF3DE;color:#27500A">2</span>
+        </div>
+        <div class="proj-row" onclick="sendPrompt('Show the UI when the api-service project is selected — a FastAPI Python project with a Makefile, detected commands: uvicorn, pytest, make migrate')">
+          <div class="pa" style="background:#E1F5EE;color:#0F6E56">AP</div>
+          <div class="pi">
+            <div class="pi-name">api-service</div>
+            <div class="pi-sub">Python · FastAPI</div>
+          </div>
+          <span class="pi-count" style="background:var(--color-background-secondary);color:var(--color-text-tertiary)">0</span>
+        </div>
+        <div class="proj-row" onclick="sendPrompt('Show the UI when the ml-pipeline project is selected — has an error state, one process crashed, show the crash log peek and restart option')">
+          <div class="pa" style="background:#FAECE7;color:#993C1D">ML</div>
+          <div class="pi">
+            <div class="pi-name">ml-pipeline</div>
+            <div class="pi-sub">Python · Makefile</div>
+          </div>
+          <span class="pi-count" style="background:#FCEBEB;color:#A32D2D">!</span>
+        </div>
+
+        <div class="sb-section" style="margin-top:6px">Running now</div>
+        <div class="proc-group">
+          <div class="proc-mini" onclick="sendPrompt('Show the OS terminal attachment flow when clicking a running process in the sidebar — the exact sequence that opens Terminal.app or Windows Terminal attached to that tmux session')">
+            <div class="pm-dot pm-dot-run pulse-dot"></div>
+            <div class="pm-info">
+              <div class="pm-name">dev server</div>
+              <div class="pm-env">my-saas-app · development</div>
+            </div>
+            <div class="pm-time">32m</div>
+            <div class="pm-term" title="Open in OS terminal">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="0.5" y="1" width="9" height="8" rx="1.5" stroke="currentColor" stroke-width="0.8"/><path d="M2 3.5l1.5 1.5L2 6.5" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 6.5h2.5" stroke="currentColor" stroke-width="0.8" stroke-linecap="round"/></svg>
+            </div>
+          </div>
+          <div class="proc-mini" onclick="sendPrompt('Show the OS terminal attachment flow for the jest watch process')">
+            <div class="pm-dot pm-dot-run pulse-dot"></div>
+            <div class="pm-info">
+              <div class="pm-name">jest watch</div>
+              <div class="pm-env">my-saas-app · test</div>
+            </div>
+            <div class="pm-time">8m</div>
+            <div class="pm-term">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="0.5" y="1" width="9" height="8" rx="1.5" stroke="currentColor" stroke-width="0.8"/><path d="M2 3.5l1.5 1.5L2 6.5" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 6.5h2.5" stroke="currentColor" stroke-width="0.8" stroke-linecap="round"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sb-bottom">
+        <button class="add-btn" onclick="sendPrompt('Show the Add Project onboarding flow — drag and drop a folder, or browse. Then show the discovery animation scanning the project, finding commands, detecting varlock or .env files, and presenting the first-run summary before landing on the main dashboard')">
+          <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M4.5 1v7M1 4.5h7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          Add project
+        </button>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="main-header">
+        <div class="mh-top">
+          <div class="proj-name-big">my-saas-app</div>
+          <div class="tech-stack">
+            <span class="ts-pill ts-nextjs">Next.js 14</span>
+            <span class="ts-pill ts-node">Node 20</span>
+            <span class="ts-pill ts-docker">Docker</span>
+            <span class="ts-pill ts-varlock">varlock</span>
+          </div>
+          <div style="margin-left:auto;display:flex;gap:7px">
+            <button class="ea-btn" onclick="sendPrompt('Show the varlock scan security audit results for this project — list of files with detected secret leaks, line numbers, which secret key was found')">Scan secrets</button>
+            <button class="ea-btn" onclick="sendPrompt('Show the project settings panel — rename, change path, configure default env per command, set up team sharing')">Settings</button>
+          </div>
+        </div>
+
+        <div class="mh-env-bar">
+          <span class="env-label">Active env</span>
+          <div class="env-selector" onclick="sendPrompt('Show the environment selector dropdown — listing .env.development (active), .env.production (8 secrets), .env.test, and a Custom option to inject raw KEY=VALUE pairs. Each env shows its validation status before selection.')">
+            <div class="env-sel-dot" style="background:#639922"></div>
+            <span class="env-sel-name">development</span>
+            <svg class="env-chevron" viewBox="0 0 10 10" fill="none"><path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <span class="env-meta">14 vars · 3 secrets resolved · 1 warning</span>
+          <div class="env-warn" onclick="sendPrompt('Show the environment health panel — the full varlock load output for development, showing DATABASE_URL is missing with instructions on how to set it')">
+            <div class="env-warn-dot"></div>
+            1 warning — DATABASE_URL missing
+          </div>
+          <div class="env-actions">
+            <button class="ea-btn" onclick="sendPrompt('Show the env variable inspector panel — the full list of all 14 variables for this project in development, their masked values, types, sources, and validation status. Clicking a variable row opens the varlock schema editor for that variable.')">View vars</button>
+            <button class="ea-btn" onclick="sendPrompt('Show the env health check — running varlock load and displaying the result as a pass/fail report before the user launches anything')">Validate</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="cmd-area">
+        <div>
+          <div class="section-row" style="margin-bottom:8px">
+            <span class="sr-label">Commands — 7 discovered</span>
+            <span class="sr-source">package.json · docker-compose.yml · Makefile</span>
+          </div>
+          <div class="cmd-grid">
+
+            <div class="cmd-card state-running">
+              <div class="cc-top">
+                <div class="cc-icon" style="background:#EEEDFE">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="#534AB7" stroke-width="1"/><path d="M5 4.5l4 2.5-4 2.5V4.5z" fill="#534AB7"/></svg>
+                </div>
+                <div class="cc-meta">
+                  <div class="cc-name">Dev server</div>
+                  <div class="cc-cmd">next dev --turbo</div>
+                  <div class="cc-src">package.json › dev</div>
+                </div>
+                <div class="cc-status">
+                  <span class="cc-badge ccb-run">running</span>
+                  <span class="cc-uptime">32m 14s</span>
+                </div>
+              </div>
+              <div class="log-peek">
+                <div><span class="lp-g">✓</span> <span class="lp-w">Ready in 1.8s — http://localhost:3000</span></div>
+                <div><span class="lp-d">○</span> <span class="lp-d">Compiling /dashboard ...</span></div>
+                <div><span class="lp-g">✓</span> <span class="lp-w">Compiled in 941ms (312 modules)</span></div>
+              </div>
+              <div class="cc-footer">
+                <button class="play-btn pb-running">
+                  <svg width="7" height="8" viewBox="0 0 7 8" fill="none"><rect x="0.5" y="0.5" width="2" height="7" rx="0.5" fill="currentColor"/><rect x="4.5" y="0.5" width="2" height="7" rx="0.5" fill="currentColor"/></svg>
+                  Running
+                </button>
+                <button class="icon-btn active-term" title="Open in OS terminal" onclick="sendPrompt('Show the full OS terminal attach sequence — clicking this fires osascript on macOS or wt.exe on Windows, opening the OS terminal already connected to the tmux session vibestart-my-saas-app-dev, showing the exact running output the user would see')">
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><rect x="0.5" y="1" width="10" height="9" rx="1.5" stroke="#27500A" stroke-width="0.8"/><path d="M2 4l2 2-2 2" stroke="#27500A" stroke-width="0.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 8h3" stroke="#27500A" stroke-width="0.9" stroke-linecap="round"/></svg>
+                </button>
+                <button class="stop-btn" onclick="sendPrompt('What happens on Stop — does the app send SIGTERM to the process inside tmux, wait 5s, then SIGKILL? Does the tmux session close or stay alive for log inspection?')">Stop</button>
+                <span class="cc-env-tag cet-dev">development</span>
+              </div>
+            </div>
+
+            <div class="cmd-card state-running">
+              <div class="cc-top">
+                <div class="cc-icon" style="background:#E1F5EE">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="#0F6E56" stroke-width="1"/><path d="M4.5 7l2 2 3-3" stroke="#0F6E56" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <div class="cc-meta">
+                  <div class="cc-name">Test watch</div>
+                  <div class="cc-cmd">jest --watch --coverage</div>
+                  <div class="cc-src">package.json › test:watch</div>
+                </div>
+                <div class="cc-status">
+                  <span class="cc-badge ccb-run">running</span>
+                  <span class="cc-uptime">8m 02s</span>
+                </div>
+              </div>
+              <div class="log-peek">
+                <div><span class="lp-g">PASS</span> <span class="lp-d">src/lib/auth.test.ts (3 tests)</span></div>
+                <div><span class="lp-g">PASS</span> <span class="lp-d">src/api/user.test.ts (7 tests)</span></div>
+                <div><span class="lp-a">●</span> <span class="lp-a">10 tests total · watching for changes</span></div>
+              </div>
+              <div class="cc-footer">
+                <button class="play-btn pb-running">
+                  <svg width="7" height="8" viewBox="0 0 7 8" fill="none"><rect x="0.5" y="0.5" width="2" height="7" rx="0.5" fill="currentColor"/><rect x="4.5" y="0.5" width="2" height="7" rx="0.5" fill="currentColor"/></svg>
+                  Running
+                </button>
+                <button class="icon-btn active-term" onclick="sendPrompt('Show the terminal attachment for jest watch — opening the OS terminal attached to this session so the developer can interact with jest menu commands like p to filter by pattern')">
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><rect x="0.5" y="1" width="10" height="9" rx="1.5" stroke="#27500A" stroke-width="0.8"/><path d="M2 4l2 2-2 2" stroke="#27500A" stroke-width="0.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 8h3" stroke="#27500A" stroke-width="0.9" stroke-linecap="round"/></svg>
+                </button>
+                <button class="stop-btn">Stop</button>
+                <span class="cc-env-tag" style="background:#E1F5EE;color:#085041;font-size:9px;padding:1px 6px;border-radius:20px;margin-left:auto">test</span>
+              </div>
+            </div>
+
+            <div class="cmd-card">
+              <div class="cc-top">
+                <div class="cc-icon" style="background:#FAEEDA">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="2" width="10" height="10" rx="2" stroke="#854F0B" stroke-width="1"/><path d="M5 7h4M7 5v4" stroke="#854F0B" stroke-width="1" stroke-linecap="round"/></svg>
+                </div>
+                <div class="cc-meta">
+                  <div class="cc-name">Build</div>
+                  <div class="cc-cmd">next build</div>
+                  <div class="cc-src">package.json › build</div>
+                </div>
+                <div class="cc-status"><span class="cc-badge ccb-idle">idle</span></div>
+              </div>
+              <div class="cc-footer">
+                <button class="play-btn pb-play" onclick="sendPrompt('Show the Play animation for Build — varlock validates the production env first (switching to production env for build is a common pattern), show the startup sequence with varlock resolving 8 secrets before next build begins, then the log peek showing build output')">
+                  <svg width="7" height="8" viewBox="0 0 7 8" fill="none"><path d="M1 1l5 3-5 3V1z" fill="currentColor"/></svg>
+                  Play
+                </button>
+                <button class="icon-btn" title="Open terminal in project dir" onclick="sendPrompt('When a process is idle, what does the terminal icon do — it opens a new OS terminal tab cd-ed to the project directory with the active env already sourced')">
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><rect x="0.5" y="1" width="10" height="9" rx="1.5" stroke="currentColor" stroke-width="0.8"/><path d="M2 4l2 2-2 2" stroke="currentColor" stroke-width="0.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 8h3" stroke="currentColor" stroke-width="0.9" stroke-linecap="round"/></svg>
+                </button>
+                <span class="cc-env-tag cet-dev" style="margin-left:auto">development</span>
+              </div>
+            </div>
+
+            <div class="cmd-card">
+              <div class="cc-top">
+                <div class="cc-icon" style="background:#E6F1FB">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="4" width="3" height="3" rx="0.5" stroke="#185FA5" stroke-width="0.9"/><rect x="5" y="4" width="3" height="3" rx="0.5" stroke="#185FA5" stroke-width="0.9"/><rect x="5" y="1" width="3" height="2.5" rx="0.5" stroke="#185FA5" stroke-width="0.9"/><rect x="9" y="4" width="3" height="3" rx="0.5" stroke="#185FA5" stroke-width="0.9"/><path d="M1.5 9c2-1.5 9-1.5 11 0" stroke="#185FA5" stroke-width="0.9" stroke-linecap="round"/></svg>
+                </div>
+                <div class="cc-meta">
+                  <div class="cc-name">Docker services</div>
+                  <div class="cc-cmd">docker compose up -d</div>
+                  <div class="cc-src">docker-compose.yml</div>
+                </div>
+                <div class="cc-status"><span class="cc-badge ccb-idle">idle</span></div>
+              </div>
+              <div class="cc-footer">
+                <button class="play-btn pb-play" onclick="sendPrompt('Show docker compose up startup — note that this command does NOT use varlock run because docker-compose reads its own env file. Show how the env bar changes to show which docker-compose.yml env vars are active.')">
+                  <svg width="7" height="8" viewBox="0 0 7 8" fill="none"><path d="M1 1l5 3-5 3V1z" fill="currentColor"/></svg>
+                  Play
+                </button>
+                <button class="icon-btn">
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><rect x="0.5" y="1" width="10" height="9" rx="1.5" stroke="currentColor" stroke-width="0.8"/><path d="M2 4l2 2-2 2" stroke="currentColor" stroke-width="0.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 8h3" stroke="currentColor" stroke-width="0.9" stroke-linecap="round"/></svg>
+                </button>
+                <span class="cc-env-tag cet-dev" style="margin-left:auto">development</span>
+              </div>
+            </div>
+
+            <div class="cmd-card">
+              <div class="cc-top">
+                <div class="cc-icon" style="background:#FAECE7">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><ellipse cx="7" cy="4" rx="4.5" ry="1.8" stroke="#993C1D" stroke-width="1"/><path d="M2.5 4v3c0 1 2 1.8 4.5 1.8s4.5-.8 4.5-1.8V4" stroke="#993C1D" stroke-width="1"/><path d="M2.5 7v3c0 1 2 1.8 4.5 1.8s4.5-.8 4.5-1.8V7" stroke="#993C1D" stroke-width="1"/></svg>
+                </div>
+                <div class="cc-meta">
+                  <div class="cc-name">DB migrate</div>
+                  <div class="cc-cmd">prisma migrate dev</div>
+                  <div class="cc-src">package.json › db:migrate</div>
+                </div>
+                <div class="cc-status"><span class="cc-badge ccb-idle">idle</span></div>
+              </div>
+              <div class="cc-footer">
+                <button class="play-btn pb-play" onclick="sendPrompt('Show the production environment safety guard — when the user presses Play on DB migrate while production env is active, show the confirmation modal with project name, env name, command, and a text field requiring them to type the env name to confirm')">
+                  <svg width="7" height="8" viewBox="0 0 7 8" fill="none"><path d="M1 1l5 3-5 3V1z" fill="currentColor"/></svg>
+                  Play
+                </button>
+                <button class="icon-btn">
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><rect x="0.5" y="1" width="10" height="9" rx="1.5" stroke="currentColor" stroke-width="0.8"/><path d="M2 4l2 2-2 2" stroke="currentColor" stroke-width="0.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 8h3" stroke="currentColor" stroke-width="0.9" stroke-linecap="round"/></svg>
+                </button>
+                <span class="cc-env-tag cet-dev" style="margin-left:auto">development</span>
+              </div>
+            </div>
+
+            <div class="cmd-card state-add" onclick="sendPrompt('Show the Add Custom Command flow — a simple form: name, command string, description, and which env it should default to. It gets saved to .vibestart.json in the project and persists across discovery re-runs.')">
+              <div class="cc-top" style="padding:18px 12px;align-items:center;justify-content:center;flex-direction:column;gap:6px">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                <div style="font-size:11px;font-weight:500;color:var(--color-text-tertiary)">Add custom command</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="statusbar">
+    <div class="sb-item"><div class="sb-dot-g pulse-dot"></div>2 processes running</div>
+    <div class="sb-sep"></div>
+    <div class="sb-item"><div class="sb-dot-g"></div>varlock v0.9.1</div>
+    <div class="sb-sep"></div>
+    <div class="sb-item"><div class="sb-dot-w"></div>1 env warning</div>
+    <div class="sb-sep"></div>
+    <div class="sb-item">tmux 3.3a · 2 sessions</div>
+    <div style="margin-left:auto">
+      <div class="sb-item" style="cursor:pointer" onclick="sendPrompt('Show the changelog / what is new panel — product updates, new command discovery sources added, new vault integrations')">v0.1.0</div>
+    </div>
+  </div>
+</div>

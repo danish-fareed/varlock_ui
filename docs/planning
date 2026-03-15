@@ -1,0 +1,128 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);font-size:13px;color:var(--color-text-primary)}
+.wrap{display:flex;flex-direction:column;gap:14px;padding:4px 0}
+.section{border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-lg);overflow:hidden}
+.sec-header{padding:10px 14px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px;background:var(--color-background-secondary)}
+.sec-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sec-title{font-size:13px;font-weight:500;flex:1}
+.sec-badge{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500}
+.sb-ok{background:#EAF3DE;color:#27500A}
+.sb-warn{background:#FAEEDA;color:#633806}
+.sb-crit{background:#FCEBEB;color:#791F1F}
+.sb-miss{background:#EEEDFE;color:#3C3489}
+.sec-body{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+
+.item{display:grid;grid-template-columns:16px 1fr;gap:8px;align-items:baseline;font-size:12px;line-height:1.5}
+.i-ok{color:#639922;font-weight:500;margin-top:2px}
+.i-warn{color:#BA7517;font-weight:500;margin-top:2px}
+.i-crit{color:#E24B4A;font-weight:500;margin-top:2px}
+.i-add{color:#534AB7;font-weight:500;margin-top:2px}
+.item-text{color:var(--color-text-secondary)}
+.item-text strong{font-weight:500;color:var(--color-text-primary)}
+code{font-family:var(--font-mono);font-size:11px;background:var(--color-background-secondary);padding:1px 5px;border-radius:4px;border:0.5px solid var(--color-border-tertiary)}
+
+.verdict{padding:14px 16px;border-radius:var(--border-radius-lg);border:0.5px solid #C0DD97;background:#EAF3DE20}
+.verdict p{font-size:13px;font-weight:500;color:#27500A;margin-bottom:6px}
+.verdict span{font-size:12px;color:#3B6D11;line-height:1.6;display:block}
+
+.crit-box{padding:12px 14px;border-radius:var(--border-radius-lg);border:1.5px solid #F7C1C1;background:#FCEBEB20}
+.crit-box p{font-size:13px;font-weight:500;color:#791F1F;margin-bottom:6px}
+.crit-box span{font-size:12px;color:#A32D2D;line-height:1.6;display:block}
+
+.score-row{display:grid;grid-template-columns:160px 1fr 40px;gap:10px;align-items:center;font-size:12px;padding:4px 0}
+.score-bar-bg{height:5px;background:var(--color-background-secondary);border-radius:3px;overflow:hidden}
+.score-bar{height:100%;border-radius:3px}
+.score-num{font-size:11px;font-weight:500;text-align:right;color:var(--color-text-secondary)}
+</style>
+
+<div class="wrap">
+
+<div class="crit-box">
+  <p>One critical gap that will break everything if not fixed first</p>
+  <span>The plan has <strong style="font-weight:500;color:#791F1F">no process persistence model</strong>. If the user closes and reopens the app, all running state is lost — the sidebar "Running now" section is empty, log peeks are blank, uptime resets to 0. This undermines the entire product promise. Must be solved before starting UI work.</span>
+</div>
+
+<div class="section">
+  <div class="sec-header">
+    <div class="sec-dot" style="background:#639922"></div>
+    <div class="sec-title">What is correct and well thought out</div>
+    <span class="sec-badge sb-ok">6 items approved</span>
+  </div>
+  <div class="sec-body">
+    <div class="item"><span class="i-ok">✓</span><div class="item-text"><strong>Tauri + Rust over Electron</strong> — correct call. Rust's <code>std::process::Command</code> handles subprocess spawning cleanly and the existing <code>process.rs</code> gives a foundation to build on.</div></div>
+    <div class="item"><span class="i-ok">✓</span><div class="item-text"><strong>Windows-first scope</strong> — pragmatic and honest. Shipping Windows well before macOS/Linux is a valid v1 decision. The terminal detection order (wt.exe → pwsh.exe → cmd.exe) is correct.</div></div>
+    <div class="item"><span class="i-ok">✓</span><div class="item-text"><strong>4 project types first</strong> — the right cut. Node.js, Python, Docker, Makefile covers ~85% of real projects. Stubbing the rest is disciplined.</div></div>
+    <div class="item"><span class="i-ok">✓</span><div class="item-text"><strong>DiscoveredCommand type shape</strong> — <code>id</code>, <code>name</code>, <code>rawCmd</code>, <code>sourceFile</code>, <code>category</code>, <code>isCustom</code>, <code>sortOrder</code> is the right contract between Rust and React.</div></div>
+    <div class="item"><span class="i-ok">✓</span><div class="item-text"><strong>.vibestart.json for custom commands</strong> — correct location. Project-level config, version-controllable, survives discovery re-runs. Good decision.</div></div>
+    <div class="item"><span class="i-ok">✓</span><div class="item-text"><strong>commandStore.ts as a Zustand store</strong> — right pattern. Separating discovered commands from runtime state (<code>runningCommands</code> map) is architecturally clean.</div></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="sec-header">
+    <div class="sec-dot" style="background:#E24B4A"></div>
+    <div class="sec-title">Critical problems — will break the product</div>
+    <span class="sec-badge sb-crit">4 blockers</span>
+  </div>
+  <div class="sec-body">
+    <div class="item"><span class="i-crit">✗</span><div class="item-text"><strong>No process persistence between app restarts.</strong> The plan uses in-memory Zustand state for <code>runningCommands</code>. Close the app and it all vanishes. You need a SQLite table or at minimum a flat JSON file in the app data directory that maps <code>commandId → { pid, startedAt, env, status }</code>. On startup, read this file, check if each PID is still alive with a <code>kill -0 {pid}</code> check (Windows: <code>tasklist /FI "PID eq {pid}"</code>), and restore running state for any that are. Without this, the product breaks its core promise the first time a developer restarts the app.</div></div>
+    <div class="item"><span class="i-crit">✗</span><div class="item-text"><strong>The terminal icon opens a NEW terminal, not the running process's session.</strong> The plan says <code>openOsTerminal(cwd)</code> just opens the OS terminal at the project directory. That is a fresh shell — not the process that has been running. The developer cannot see existing output, cannot interact with the process (Ctrl+C, type <code>rs</code> for nodemon, etc.). This is the most important UX promise of the product. On Windows without tmux, the correct approach is: when a process is running, the terminal icon should open Windows Terminal and attach to that process's console buffer. See the "Windows PTY solution" note added below.</div></div>
+    <div class="item"><span class="i-crit">✗</span><div class="item-text"><strong>No varlock pre-flight validation before Play.</strong> The plan calls <code>commandStore.launchCommand(cwd, commandId, env)</code> which delegates to <code>terminalStore.launchProcess</code>. There is no step that runs <code>varlock load --format=json</code> first to verify the env is valid. This means a developer can click Play with a broken env (missing required variable, failed secret resolution) and only find out when the process crashes. Pre-flight must be: call varlock load → check <code>valid: false</code> → block Play with inline error on the card → never let a broken env reach a running process.</div></div>
+    <div class="item"><span class="i-crit">✗</span><div class="item-text"><strong>The env is not bonded to the process at launch time.</strong> The plan has an <code>env</code> parameter in <code>launchCommand</code> but does not specify how it is actually injected into the spawned process. For varlock projects: the command must be wrapped as <code>APP_ENV={env} varlock run -- {rawCmd}</code>. For plain .env projects: the env file must be parsed and each var passed to the child process environment. The plan mentions neither. Without this, the env selector is cosmetic — it does not actually change what the process receives.</div></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="sec-header">
+    <div class="sec-dot" style="background:#BA7517"></div>
+    <div class="sec-title">Warnings — missing pieces that will hurt later</div>
+    <span class="sec-badge sb-warn">6 gaps</span>
+  </div>
+  <div class="sec-body">
+    <div class="item"><span class="i-warn">▲</span><div class="item-text"><strong>Log peek has no real streaming plan.</strong> The plan mentions <code>logBuffers: Map&lt;commandId, string[]&gt;</code> but does not say how lines get into it. The existing <code>terminalStore.launchProcess</code> presumably streams to a terminal panel — you need a separate pipe that captures those lines, keeps only the last 3, and triggers a React re-render on each new line. Tauri's <code>emit</code> events from the Rust side to the frontend are the right mechanism. This needs to be specified.</div></div>
+    <div class="item"><span class="i-warn">▲</span><div class="item-text"><strong>Uptime counter is unspecified.</strong> The design shows "32m 14s" on running cards. The plan has <code>startedAt</code> in the running state map but no component that ticks a timer. You need a <code>useEffect</code> interval in <code>CommandCard</code> that computes <code>now - startedAt</code> and formats it. Minor but missing.</div></div>
+    <div class="item"><span class="i-warn">▲</span><div class="item-text"><strong>pyproject.toml discovery is incomplete.</strong> The plan checks <code>[tool.taskipy.tasks]</code>, <code>[tool.poe.tasks]</code>, and <code>[tool.scripts]</code> — but misses the most common Python pattern: a project with no task runner at all, where the only commands are <code>python main.py</code>, <code>uvicorn app:app --reload</code>, or <code>flask run</code>. Add a fallback: if a <code>pyproject.toml</code> or <code>requirements.txt</code> is present and no task runner is found, surface <code>python -m uvicorn</code> and <code>python -m flask run</code> as suggested commands based on which packages are in the dependencies.</div></div>
+    <div class="item"><span class="i-warn">▲</span><div class="item-text"><strong>No production safety guard.</strong> The design spec requires a confirmation gate before running destructive commands (database migrations, seeds) against a production env. The plan has no mention of this. The <code>DiscoveredCommand</code> type needs a <code>requiresConfirmation: boolean</code> field, and the <code>CommandCard</code> Play handler needs to check the active env name and the command category before allowing launch.</div></div>
+    <div class="item"><span class="i-warn">▲</span><div class="item-text"><strong>AppView type is inconsistent.</strong> The plan adds <code>"commands"</code> to <code>AppView</code> but the dashboard redesign makes commands the primary view. You will end up with <code>AppView = "dashboard"</code> showing the command grid, which is confusing. Either rename <code>"dashboard"</code> to <code>"commands"</code> or remove the distinction and make commands the only main view with env/variable panel as a drawer.</div></div>
+    <div class="item"><span class="i-warn">▲</span><div class="item-text"><strong>File watcher is absent.</strong> If a developer adds a new script to <code>package.json</code> while the app is open, the command grid will not update. The plan mentions chokidar in the design discussions but it is not in this implementation plan. Add a <code>watch_project_files(cwd)</code> Tauri command that sets up a file watcher on <code>package.json</code>, <code>Makefile</code>, <code>docker-compose.yml</code>, <code>pyproject.toml</code>, and <code>.vibestart.json</code>, emitting a <code>commands-changed</code> event that triggers <code>discoverForProject</code> in the store.</div></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="sec-header">
+    <div class="sec-dot" style="background:#534AB7"></div>
+    <div class="sec-title">Additions needed — not in plan at all</div>
+    <span class="sec-badge sb-miss">5 additions</span>
+  </div>
+  <div class="sec-body">
+    <div class="item"><span class="i-add">+</span><div class="item-text"><strong>Windows PTY attach solution.</strong> Without tmux on Windows, "open terminal attached to running process" requires a different approach. The correct Windows-native solution: when spawning the child process, allocate a Windows console (<code>CREATE_NEW_CONSOLE</code> flag) but keep it hidden. Store the process's window handle. When the user clicks the terminal icon, show that hidden console window with <code>ShowWindow(hwnd, SW_SHOW)</code>. This is the closest Windows equivalent to tmux attach — the user sees the actual running process's console, not a new shell.</div></div>
+    <div class="item"><span class="i-add">+</span><div class="item-text"><strong>Process registry: <code>process_registry.rs</code></strong> — a new Rust module that writes a JSON file to the Tauri app data directory (<code>app.path().app_data_dir()</code>) mapping session IDs to process state. Called on every launch, stop, and crash event. Read on startup to restore running state. This is 1 file, ~80 lines of Rust, and it solves the persistence blocker completely.</div></div>
+    <div class="item"><span class="i-add">+</span><div class="item-text"><strong>EnvInjector in Rust.</strong> Add <code>get_env_for_command(cwd, env_name, project_type) -> HashMap&lt;String, String&gt;</code> in a new <code>env_injector.rs</code>. For varlock projects: call <code>varlock load --format=json</code> and parse the output. For plain .env: parse the file directly in Rust with the <code>dotenvy</code> crate. Return the map and pass it to the spawned child process via <code>Command::envs()</code>. This is how the env actually gets injected — not as a shell string prefix.</div></div>
+    <div class="item"><span class="i-add">+</span><div class="item-text"><strong>Crash detection and card state.</strong> When a running process exits unexpectedly (non-zero exit code), the card must transition to an error state showing the exit code and the last 10 lines of output. Add a <code>status: "idle" | "running" | "error" | "stopped"</code> field to the running state. The Rust side emits a <code>process-exited</code> event with <code>{ commandId, exitCode, lastLines }</code>. The store updates state. The card renders the error state with a "View crash log" button and a "Restart" button.</div></div>
+    <div class="item"><span class="i-add">+</span><div class="item-text"><strong>Tech stack detection in discovery.rs.</strong> The <code>TopBar</code> plan mentions tech stack pills but the discovery engine does not produce them. Add a <code>detect_tech_stack(cwd) -> Vec&lt;TechBadge&gt;</code> alongside <code>discover_commands</code>. Logic: <code>package.json</code> present → Node.js badge; check <code>dependencies</code> for <code>next</code> → Next.js, <code>react</code> → React, <code>express</code> → Express; <code>pyproject.toml</code> or <code>requirements.txt</code> → Python; <code>Cargo.toml</code> → Rust; <code>go.mod</code> → Go; <code>docker-compose.yml</code> → Docker; <code>.env.schema</code> → varlock.</div></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="sec-header">
+    <div class="sec-dot" style="background:#5F5E5A"></div>
+    <div class="sec-title">Plan quality scores</div>
+  </div>
+  <div class="sec-body">
+    <div class="score-row"><span style="color:var(--color-text-secondary)">Architectural soundness</span><div class="score-bar-bg"><div class="score-bar" style="width:82%;background:#534AB7"></div></div><span class="score-num">8.2</span></div>
+    <div class="score-row"><span style="color:var(--color-text-secondary)">Completeness</span><div class="score-bar-bg"><div class="score-bar" style="width:58%;background:#534AB7"></div></div><span class="score-num">5.8</span></div>
+    <div class="score-row"><span style="color:var(--color-text-secondary)">Implementation readiness</span><div class="score-bar-bg"><div class="score-bar" style="width:62%;background:#534AB7"></div></div><span class="score-num">6.2</span></div>
+    <div class="score-row"><span style="color:var(--color-text-secondary)">Varlock integration correctness</span><div class="score-bar-bg"><div class="score-bar" style="width:45%;background:#E24B4A"></div></div><span class="score-num">4.5</span></div>
+    <div class="score-row"><span style="color:var(--color-text-secondary)">Frontend design fidelity</span><div class="score-bar-bg"><div class="score-bar" style="width:75%;background:#534AB7"></div></div><span class="score-num">7.5</span></div>
+    <div class="score-row"><span style="color:var(--color-text-secondary)">Verification plan</span><div class="score-bar-bg"><div class="score-bar" style="width:70%;background:#534AB7"></div></div><span class="score-num">7.0</span></div>
+  </div>
+</div>
+
+<div class="verdict">
+  <p>Bottom line — ship it after fixing the 4 blockers</p>
+  <span>The plan's scope, technology choices, and file structure are correct. The 4 critical problems (no persistence, wrong terminal attach behavior, missing pre-flight validation, env not actually injected) must be resolved before implementation begins — they are not polish, they are load-bearing. Fix those, add the 5 missing pieces, and this plan becomes implementation-ready. Estimated additions: 3 new Rust files (~250 lines total) and 2 additions to the TypeScript store.</span>
+</div>
+
+</div>

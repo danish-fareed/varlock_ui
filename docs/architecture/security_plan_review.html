@@ -1,0 +1,222 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);font-size:13px;color:var(--color-text-primary)}
+.wrap{display:flex;flex-direction:column;gap:14px;padding:4px 0}
+
+.verdict-box{padding:14px 16px;border-radius:var(--border-radius-lg)}
+.vb-good{border:0.5px solid #C0DD97;background:#EAF3DE20}
+.vb-warn{border:1.5px solid #FAC775;background:#FAEEDA15}
+.vb-crit{border:1.5px solid #F7C1C1;background:#FCEBEB15}
+.vb-title{font-size:13px;font-weight:500;margin-bottom:5px}
+.vb-body{font-size:12px;line-height:1.6;color:var(--color-text-secondary)}
+
+.section{border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-lg);overflow:hidden}
+.sh{padding:10px 14px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:9px;background:var(--color-background-secondary)}
+.sh-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sh-title{font-size:13px;font-weight:500;flex:1}
+.sh-badge{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500}
+.badge-ok{background:#EAF3DE;color:#27500A}
+.badge-warn{background:#FAEEDA;color:#633806}
+.badge-crit{background:#FCEBEB;color:#791F1F}
+.badge-miss{background:#EEEDFE;color:#3C3489}
+.badge-info{background:#E6F1FB;color:#0C447C}
+.sb{padding:12px 14px;display:flex;flex-direction:column;gap:9px}
+
+.finding-row{display:grid;grid-template-columns:28px 120px 1fr;gap:10px;align-items:start;font-size:12px;line-height:1.5}
+.fr-num{font-family:var(--font-mono);font-size:11px;font-weight:500;color:var(--color-text-tertiary);padding-top:1px}
+.fr-status{padding-top:1px}
+.status-pill{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500;white-space:nowrap;display:inline-block}
+.sp-ok{background:#EAF3DE;color:#27500A}
+.sp-incomplete{background:#FAEEDA;color:#633806}
+.sp-wrong{background:#FCEBEB;color:#791F1F}
+.sp-missing{background:#EEEDFE;color:#3C3489}
+.sp-info{background:#E6F1FB;color:#0C447C}
+.fr-body{color:var(--color-text-secondary)}
+.fr-body strong{font-weight:500;color:var(--color-text-primary)}
+code{font-family:var(--font-mono);font-size:10px;background:var(--color-background-secondary);padding:1px 5px;border-radius:3px;border:0.5px solid var(--color-border-tertiary);color:var(--color-text-primary)}
+
+.divider{height:0.5px;background:var(--color-border-tertiary)}
+
+.score-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px 14px}
+.score-card{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 12px}
+.sc-label{font-size:10px;color:var(--color-text-tertiary);margin-bottom:6px;font-weight:500;letter-spacing:.04em;text-transform:uppercase}
+.sc-bar-bg{height:5px;background:var(--color-background-primary);border-radius:3px;overflow:hidden;margin-bottom:5px;border:0.5px solid var(--color-border-tertiary)}
+.sc-bar{height:100%;border-radius:3px;background:#534AB7}
+.sc-val{font-size:18px;font-weight:500;color:var(--color-text-primary)}
+.sc-sub{font-size:10px;color:var(--color-text-tertiary);margin-top:1px}
+</style>
+
+<div class="wrap">
+
+<div class="verdict-box vb-warn">
+  <div class="vb-title" style="color:#633806">Overall verdict — good audit, implementation plan has 4 problems that need fixing before coding starts</div>
+  <div class="vb-body">The two security reports (original + extended) are accurate, well-prioritized, and together cover the threat surface correctly. The implementation plan correctly addresses 7 of the 9 new findings. But two fixes are technically wrong (#13 keyring strategy), one is dangerously incomplete (#10 path traversal), one is missing entirely (#1 password lingering — from the original report), and the test suite has a statistical flaw. These are not polish — fix them before implementation.</div>
+</div>
+
+<div class="section">
+  <div class="sh">
+    <div class="sh-dot" style="background:#639922"></div>
+    <div class="sh-title">Findings correctly addressed</div>
+    <span class="sh-badge badge-ok">7 of 9 correct</span>
+  </div>
+  <div class="sb">
+    <div class="finding-row">
+      <span class="fr-num">#6</span>
+      <div class="fr-status"><span class="status-pill sp-ok">Correct</span></div>
+      <div class="fr-body"><strong>CSP fix</strong> — the proposed CSP string is production-ready. Including <code>connect-src ipc: http://ipc.localhost</code> is the right Tauri-specific addition that many generic CSP guides miss. Approved.</div>
+    </div>
+    <div class="divider"></div>
+    <div class="finding-row">
+      <span class="fr-num">#7</span>
+      <div class="fr-status"><span class="status-pill sp-ok">Correct</span></div>
+      <div class="fr-body"><strong>Modular bias fix</strong> — rejection sampling is the correct approach. The plan's formula <code>256 - (256 % charset.len())</code> is mathematically right. Approved.</div>
+    </div>
+    <div class="divider"></div>
+    <div class="finding-row">
+      <span class="fr-num">#8</span>
+      <div class="fr-status"><span class="status-pill sp-ok">Correct</span></div>
+      <div class="fr-body"><strong>DEK validation</strong> — adding <code>verify_dek()</code> as a canary trial decrypt in <code>vault_db.rs</code> and calling it in <code>vault_auto_unlock</code> before storing state is the right pattern. Return <code>Ok(false)</code> to let the frontend fall back to manual unlock cleanly. Approved.</div>
+    </div>
+    <div class="divider"></div>
+    <div class="finding-row">
+      <span class="fr-num">#9</span>
+      <div class="fr-status"><span class="status-pill sp-ok">Correct</span></div>
+      <div class="fr-body"><strong>Audit log hashing</strong> — making <code>key_hash</code> <code>pub(crate)</code> and hashing at the <code>audit.rs</code> helper level (not just <code>log_access</code>) is the right depth. Updating all four helpers is complete. Approved.</div>
+    </div>
+    <div class="divider"></div>
+    <div class="finding-row">
+      <span class="fr-num">#12</span>
+      <div class="fr-status"><span class="status-pill sp-ok">Correct</span></div>
+      <div class="fr-body"><strong>Password policy</strong> — enforcing minimum length on the backend in <code>crypto.rs</code> (not just frontend) is the correct defense-in-depth placement. 12 chars is a reasonable minimum for a vault master password. Approved.</div>
+    </div>
+    <div class="divider"></div>
+    <div class="finding-row">
+      <span class="fr-num">#14</span>
+      <div class="fr-status"><span class="status-pill sp-ok">Correct</span></div>
+      <div class="fr-body"><strong>File permissions</strong> — using <code>#[cfg(unix)]</code> to set <code>0o600</code> after DB creation is the right platform-gated approach. Approved.</div>
+    </div>
+    <div class="divider"></div>
+    <div class="finding-row">
+      <span class="fr-num">#11</span>
+      <div class="fr-status"><span class="status-pill sp-incomplete">Partial</span></div>
+      <div class="fr-body"><strong>Command injection — CWD quoting only</strong> — the plan only sanitizes the <code>cwd</code> parameter, but the audit finding correctly identified that the <code>command</code> string itself is also passed directly to <code>cmd /C</code> and <code>sh -c</code>. Quoting <code>cwd</code> reduces one injection surface but leaves the <code>command</code> string completely unsanitized. See the Problems section below.</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="sh">
+    <div class="sh-dot" style="background:#E24B4A"></div>
+    <div class="sh-title">Problems — wrong, incomplete, or missing fixes</div>
+    <span class="sh-badge badge-crit">4 problems</span>
+  </div>
+  <div class="sb">
+    <div class="finding-row">
+      <span class="fr-num">#13</span>
+      <div class="fr-status"><span class="status-pill sp-wrong">Wrong fix</span></div>
+      <div class="fr-body">
+        <strong>Keyring strategy — the proposed fix stores Argon2 salt + password hash, which is cryptographically meaningless for re-derivation.</strong><br><br>
+        The plan says: "store the Argon2 salt + password hash instead of the raw DEK." This is wrong in two ways. First, a password <em>hash</em> is not the password — you cannot feed a SHA256 hash of the password back into Argon2id and get the same KEK. You need the actual password or an equivalent credential. Second, even if you stored the password itself, you already have the salt stored alongside the protected DEK in the DB — storing it again in the keyring is redundant.<br><br>
+        <strong>The correct fix:</strong> Store the actual master password (as a <code>SecretString</code>) in the OS keyring, not a hash of it. In <code>vault_auto_unlock</code>, retrieve the password from the keyring, then run the exact same Argon2id derivation path as <code>vault_unlock</code> to re-derive the KEK, then decrypt the protected DEK normally. This preserves the full Argon2id cost on every auto-unlock, which is the security goal. The audit finding says this explicitly — the plan misread it.
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="finding-row">
+      <span class="fr-num">#10</span>
+      <div class="fr-status"><span class="status-pill sp-incomplete">Incomplete fix</span></div>
+      <div class="fr-body">
+        <strong>Path traversal fix is insufficient — filename-prefix check alone does not prevent traversal.</strong><br><br>
+        The plan says: "the filename component must start with <code>.env</code>." A path like <code>/projects/myapp/../../etc/passwd</code> has a filename of <code>passwd</code> — that check correctly blocks it. But <code>/projects/myapp/.env/../../../etc/passwd</code> has a filename of <code>passwd</code> after resolution — but the plan operates on the <em>raw string</em> before resolution, so it sees filename <code>passwd</code> from the original string and blocks it. That part is fine.<br><br>
+        The real gap: the plan does not canonicalize the path before validating. A path like <code>/projects/app/.env%2F../../../etc/passwd</code> or a Windows path with <code>..\</code> segments may bypass a simple filename check depending on how Rust's <code>Path::file_name()</code> handles them. <strong>The correct fix:</strong> call <code>std::fs::canonicalize()</code> on the path first (which resolves all <code>..</code> and symlinks to an absolute real path), then check that the canonical path (1) starts with a known registered project directory and (2) has a filename starting with <code>.env</code>. Both checks together close the traversal. The plan currently does only one of the two.
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="finding-row">
+      <span class="fr-num">#1</span>
+      <div class="fr-status"><span class="status-pill sp-missing">Not addressed</span></div>
+      <div class="fr-body">
+        <strong>Password lingering in memory — original report Finding #1 is completely absent from the implementation plan.</strong><br><br>
+        The implementation plan title says "Fix all 9 security findings" referring to the 9 <em>new</em> findings from the extended audit. But Finding #1 from the original report (password lingering as a plain <code>String</code>) is a real bug with a clear fix — and the implementation plan for #13 is now touching exactly this code path in <code>vault_unlock</code> and <code>vault_setup</code>. It is the right moment to fix it.<br><br>
+        <strong>The fix is two lines per call site:</strong> receive the password into a <code>zeroize::Zeroizing&lt;String&gt;</code> wrapper, or immediately after key derivation call <code>password.zeroize()</code> before any await point. Since the corrected #13 fix now stores the raw password in the keyring, the zeroization of the local variable becomes even more important.
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="finding-row">
+      <span class="fr-num">#11</span>
+      <div class="fr-status"><span class="status-pill sp-incomplete">Incomplete fix</span></div>
+      <div class="fr-body">
+        <strong>Command injection — only CWD is sanitized, the command string itself is not.</strong><br><br>
+        The audit explicitly calls out both the <code>command</code> string in <code>direct_run</code> (<code>cmd /C &lt;command&gt;</code>) and the <code>cwd</code> in <code>run_in_terminal</code>. The plan fixes only <code>cwd</code> quoting. The <code>command</code> parameter to <code>direct_run</code> is still passed raw into a shell.<br><br>
+        For a developer tool where users type their own commands, a full allowlist is impractical. The correct mitigation is to stop using shell invocation entirely: instead of <code>cmd /C {command}</code>, parse the command string into an argv array (split on spaces, handle quoted tokens) and call <code>Command::new(argv[0]).args(&argv[1..])</code>. This removes the shell interpreter entirely — no shell means no shell injection, regardless of what characters are in the command string. This is how Tauri's sidecar API and most process-spawning libraries work for exactly this reason.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="sh">
+    <div class="sh-dot" style="background:#BA7517"></div>
+    <div class="sh-title">Test suite issues</div>
+    <span class="sh-badge badge-warn">2 flaws</span>
+  </div>
+  <div class="sb">
+    <div class="finding-row">
+      <span class="fr-num">T1</span>
+      <div class="fr-status"><span class="status-pill sp-incomplete">Flawed</span></div>
+      <div class="fr-body">
+        <strong>Bias test sample size is too small and threshold is too loose.</strong><br><br>
+        <code>test_generate_from_charset_no_bias</code> generates 10,000 chars and asserts ≤ 5% deviation. For a 62-character charset with 10,000 samples, expected frequency per character is ~161. A 5% deviation threshold allows up to 8 extra occurrences per character — but the actual bias from modular reduction is only ~1.25 occurrences (5/256 vs 4/256). This test would pass even with the buggy code. Use 100,000 samples and a ≤ 1% threshold (or a proper chi-squared test) to actually catch the bias.
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="finding-row">
+      <span class="fr-num">T2</span>
+      <div class="fr-status"><span class="status-pill sp-missing">Missing</span></div>
+      <div class="fr-body">
+        <strong>No test for the path traversal fix.</strong><br><br>
+        Given that the fix itself is incomplete (see #10 above), a test is especially important. Add <code>test_read_env_file_path_traversal_blocked</code>: call <code>read_env_file</code> with a path containing <code>../</code> segments, a symlink pointing outside the project directory, and a URL-encoded traversal sequence. Assert all three return an error. This test will also verify that <code>canonicalize()</code> is being called correctly.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="sh">
+    <div class="sh-dot" style="background:#185FA5"></div>
+    <div class="sh-title">Plan quality scores</div>
+  </div>
+  <div class="score-grid">
+    <div class="score-card">
+      <div class="sc-label">Audit quality (both reports)</div>
+      <div class="sc-bar-bg"><div class="sc-bar" style="width:92%"></div></div>
+      <div class="sc-val">9.2</div>
+      <div class="sc-sub">Findings are real, accurate, well-described</div>
+    </div>
+    <div class="score-card">
+      <div class="sc-label">Fix correctness</div>
+      <div class="sc-bar-bg"><div class="sc-bar" style="width:62%"></div></div>
+      <div class="sc-val">6.2</div>
+      <div class="sc-sub">7/9 correct · 1 wrong · 2 incomplete</div>
+    </div>
+    <div class="score-card">
+      <div class="sc-label">Fix completeness</div>
+      <div class="sc-bar-bg"><div class="sc-bar" style="width:55%"></div></div>
+      <div class="sc-val">5.5</div>
+      <div class="sc-sub">Original Finding #1 unaddressed</div>
+    </div>
+    <div class="score-card">
+      <div class="sc-label">Test suite quality</div>
+      <div class="sc-bar-bg"><div class="sc-bar" style="width:58%"></div></div>
+      <div class="sc-val">5.8</div>
+      <div class="sc-sub">Bias test threshold too loose · missing traversal test</div>
+    </div>
+  </div>
+</div>
+
+<div class="verdict-box vb-good">
+  <div class="vb-title" style="color:#27500A">What to do before implementation</div>
+  <div class="vb-body">1. Correct #13: store the master password in keyring, re-derive KEK on auto-unlock — not a hash.<br>2. Complete #10: add <code>canonicalize()</code> + registered-project-directory check, not just filename prefix.<br>3. Add #1 to the plan: zeroize the password <code>String</code> in <code>vault_unlock</code> and <code>vault_setup</code> while you're already editing that code for #13.<br>4. Complete #11: replace shell invocation with direct argv spawning in <code>direct_run</code>.<br>5. Fix the bias test: 100k samples, ≤1% threshold or chi-squared.<br>6. Add the path traversal test.<br>After these 6 corrections the plan is implementation-ready. Implementation order: #6 (CSP) first — it's one JSON line and reduces the blast radius of everything else immediately.</div>
+</div>
+
+</div>

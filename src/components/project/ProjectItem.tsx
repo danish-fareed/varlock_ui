@@ -25,6 +25,7 @@ const FOLDER_COLORS = [
 
 /**
  * Single project row — macOS sidebar source list item with folder icon.
+ * Uses a <div> with role="button" to avoid nested <button> HTML violations.
  */
 export function ProjectItem({ 
   project, 
@@ -52,9 +53,12 @@ export function ProjectItem({
       onDrop={onDrop}
       className="group relative"
     >
-      <button
+      <div
+        role="button"
+        tabIndex={0}
         onClick={onClick}
-        className={`flex items-center gap-2.5 px-2.5 py-[7px] cursor-pointer transition-all w-full text-left rounded-lg border-none ${
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onClick(); }}
+        className={`flex items-center gap-2.5 px-2.5 py-[7px] cursor-pointer transition-all w-full text-left rounded-lg ${
           isActive
             ? "bg-accent text-white shadow-[0_1px_3px_rgba(10,132,255,0.25)]"
             : "bg-transparent text-text hover:bg-sidebar-hover"
@@ -129,7 +133,7 @@ export function ProjectItem({
             }}
           />
         </div>
-      </button>
+      </div>
     </div>
   );
 }

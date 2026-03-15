@@ -2,17 +2,16 @@ import { useState } from "react";
 import { useProjectStore } from "@/stores/projectStore";
 import { useEnvironmentStore } from "@/stores/environmentStore";
 import { useScanStore } from "@/stores/scanStore";
-import { useSettingsStore } from "@/stores/settingsStore";
 import { SettingsModal } from "@/components/settings/SettingsPage";
+import * as commands from "@/lib/commands";
 
 /**
- * macOS-style toolbar: project title, status badge, scan button, settings, terminal toggle.
+ * macOS-style toolbar: project title, status badge, scan button, settings, open terminal.
  */
 export function TopBar() {
   const { activeProject, view } = useProjectStore();
   const { loadResult, isLoading } = useEnvironmentStore();
   const { runScan, state: scanState, showResults } = useScanStore();
-  const { terminalOpen, toggleTerminal } = useSettingsStore();
   const [showSettings, setShowSettings] = useState(false);
 
   if (!activeProject) return null;
@@ -40,6 +39,12 @@ export function TopBar() {
   const handleScan = () => {
     if (activeProject?.path && scanState !== "scanning") {
       runScan(activeProject.path);
+    }
+  };
+
+  const handleOpenTerminal = () => {
+    if (activeProject?.path) {
+      commands.openTerminalAt(activeProject.path);
     }
   };
 
@@ -92,7 +97,7 @@ export function TopBar() {
           </>
         )}
 
-        {/* Global Toolbar Actions (always visible when project is active) */}
+        {/* Global Toolbar Actions */}
         {activeProject.status !== "migrationNeeded" && (
           <div className="flex items-center gap-1.5 ml-1">
             {/* Settings button */}
@@ -107,15 +112,11 @@ export function TopBar() {
               </svg>
             </button>
 
-            {/* Terminal toggle */}
+            {/* Open OS terminal button */}
             <button
-              onClick={toggleTerminal}
-              className={`h-7 px-3 text-[12px] font-medium rounded-md transition-colors cursor-pointer border flex items-center gap-1.5 ${
-                terminalOpen
-                  ? "bg-accent text-white border-accent"
-                  : "bg-surface text-text-secondary border-border hover:bg-surface-secondary hover:text-text"
-              }`}
-              title={terminalOpen ? "Close terminal" : "Open terminal"}
+              onClick={handleOpenTerminal}
+              className="h-7 px-3 text-[12px] font-medium rounded-md transition-colors cursor-pointer border flex items-center gap-1.5 bg-surface text-text-secondary border-border hover:bg-surface-secondary hover:text-text"
+              title="Open OS terminal at project directory"
             >
               <svg width="13" height="13" viewBox="0 0 13 13" fill="none" className="shrink-0">
                 <path d="M2.5 3l3.5 3.5L2.5 10M7.5 10h3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />

@@ -5,6 +5,7 @@ mod vault;
 
 use commands::filesystem::WatcherState;
 use state::app_state::AppState;
+use state::process_registry::ProcessRegistry;
 use state::process_state::ProcessState;
 use state::vault_state::VaultState;
 use vault::vault_db::VaultDb;
@@ -21,6 +22,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .manage(AppState::new())
         .manage(ProcessState::new())
+        .manage(ProcessRegistry::new())
         .manage(WatcherState::new())
         .manage(vault_state)
         .invoke_handler(tauri::generate_handler![
@@ -35,6 +37,7 @@ pub fn run() {
             commands::varlock::migration_apply,
             commands::process::varlock_run,
             commands::process::process_kill,
+            commands::process::direct_run,
             commands::project::project_list,
             commands::project::project_add,
             commands::project::project_remove,
@@ -62,6 +65,13 @@ pub fn run() {
             commands::vault::vault_resolve_env,
             commands::vault::vault_write_ref_env,
             commands::vault::vault_forget_device,
+            // Discovery commands
+            commands::discovery::scan_project,
+            commands::discovery::save_custom_command,
+            // Terminal commands
+            commands::terminal_attach::open_terminal_at,
+            commands::terminal_attach::attach_to_process,
+            commands::terminal_attach::run_in_terminal,
             // AI Context commands
             commands::ai_context::ai_context_json,
             commands::ai_context::ai_context_markdown,

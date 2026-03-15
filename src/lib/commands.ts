@@ -9,6 +9,7 @@ import type {
   VarlockStatus,
   ProcessEvent,
   Project,
+  ProjectScan,
 } from "./types";
 
 // ── Varlock CLI commands ──
@@ -83,6 +84,20 @@ export async function processKill(processId: string): Promise<void> {
   return invoke<void>("process_kill", { processId });
 }
 
+export async function directRun(
+  cwd: string,
+  command: string,
+  onEvent: (event: ProcessEvent) => void,
+): Promise<string> {
+  const channel = new Channel<ProcessEvent>();
+  channel.onmessage = onEvent;
+  return invoke<string>("direct_run", {
+    cwd,
+    command,
+    onEvent: channel,
+  });
+}
+
 // ── Project management ──
 
 export async function projectList(): Promise<Project[]> {
@@ -148,4 +163,39 @@ export async function watchProject(
 
 export async function unwatchProject(projectId: string): Promise<void> {
   return invoke<void>("unwatch_project", { projectId });
+}
+
+// ── Discovery commands ──
+
+export async function scanProject(cwd: string): Promise<ProjectScan> {
+  return invoke<ProjectScan>("scan_project", { cwd });
+}
+
+export async function saveCustomCommand(
+  cwd: string,
+  name: string,
+  command: string,
+  category: string,
+): Promise<void> {
+  return invoke<void>("save_custom_command", { cwd, name, command, category });
+}
+
+// ── Terminal commands ──
+
+export async function openTerminalAt(cwd: string): Promise<void> {
+  return invoke<void>("open_terminal_at", { cwd });
+}
+
+export async function attachToProcess(
+  pid: number,
+  cwd: string,
+): Promise<void> {
+  return invoke<void>("attach_to_process", { pid, cwd });
+}
+
+export async function runInTerminal(
+  cwd: string,
+  command: string,
+): Promise<void> {
+  return invoke<void>("run_in_terminal", { cwd, command });
 }
