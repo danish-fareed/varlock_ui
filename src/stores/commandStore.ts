@@ -32,7 +32,7 @@ interface CommandState {
   reset: () => void;
 }
 
-export const useCommandStore = create<CommandState>((set, get) => ({
+export const useCommandStore = create<CommandState>((set) => ({
   scan: null,
   isScanning: false,
   running: {},

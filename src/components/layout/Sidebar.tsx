@@ -110,18 +110,11 @@ export function Sidebar() {
       {/* Drag region / brand header */}
       <div data-tauri-drag-region className="no-select px-4 pt-4 pb-2">
         <div className="flex items-center gap-2.5">
-          <div className="w-6 h-6 rounded-lg bg-accent flex items-center justify-center">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path
-                d="M2 3l4 2.5L10 3M6 5.5V11M2 3v5.5L6 11l4-2.5V3L6 0.5 2 3z"
-                stroke="white"
-                strokeWidth="1"
-                strokeLinejoin="round"
-              />
-            </svg>
+          <div className="w-7 h-7 flex items-center justify-center">
+            <img src="/icon.svg" alt="Devpad Logo" className="w-full h-full object-contain" />
           </div>
-          <span className="text-[13px] font-semibold text-text tracking-tight">
-            Varlock
+          <span className="text-[14px] font-bold text-text tracking-tight">
+            Devpad
           </span>
           <div className="ml-auto flex items-center gap-1">
             <button

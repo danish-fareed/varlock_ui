@@ -3,10 +3,10 @@
 
 @theme {
   /* ── Accent ── */
-  --color-accent: #0A84FF;
-  --color-accent-hover: #0071E3;
-  --color-accent-light: #E8F2FF;
-  --color-accent-muted: #9DC4F0;
+  --color-accent: #6C5CFF;
+  --color-accent-hover: #5B4DE6;
+  --color-accent-light: #F0EEFF;
+  --color-accent-muted: #B6AEFF;
 
   /* ── Semantic ── */
   --color-success: #34C759;
@@ -44,8 +44,8 @@
 
 /* ── Dark mode overrides ── */
 .dark {
-  --color-accent-light: rgba(10, 132, 255, 0.15);
-  --color-accent-muted: #1A5A9E;
+  --color-accent-light: rgba(108, 92, 255, 0.15);
+  --color-accent-muted: #4B3FBF;
 
   --color-success-light: rgba(52, 199, 89, 0.15);
   --color-success-dark: #4CD964;
