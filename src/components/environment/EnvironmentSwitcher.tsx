@@ -56,8 +56,7 @@ export function EnvironmentSwitcher({
                 </div>
               </div>
               <span
-                className="text-[10px] font-medium px-1.5 py-[2px] rounded-md shrink-0"
-                style={{ backgroundColor: badge.bg, color: badge.text }}
+                className={`text-[10px] font-medium px-1.5 py-[2px] rounded-md shrink-0 ${badge}`}
               >
                 {env}
               </span>

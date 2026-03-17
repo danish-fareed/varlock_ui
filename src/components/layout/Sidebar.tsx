@@ -6,10 +6,10 @@ import { AddProjectDialog } from "@/components/project/AddProjectDialog";
 import { useState } from "react";
 import type { AppView } from "@/lib/types";
 import * as commands from "@/lib/commands";
+import { LayoutDashboard, ShieldCheck, ChevronRight, Plus, ChevronLeft, Terminal, Activity } from "lucide-react";
 
 /**
- * macOS Finder-style collapsible sidebar.
- * Nav: Dashboard + Vault. Settings moved to TopBar popup.
+ * Sidebar with clear section hierarchy: Logo → Nav → Projects → Running.
  */
 export function Sidebar() {
   const projects = useProjectStore((s) => s.projects);
@@ -17,29 +17,20 @@ export function Sidebar() {
   const { sidebarCollapsed, toggleSidebar } = useSettingsStore();
   const running = useCommandStore((s) => s.running);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [isProjectsCollapsed, setIsProjectsCollapsed] = useState(false);
+
+  const runningCount = Object.values(running).filter((r) => r.status === "running").length;
 
   const navItems: { id: AppView; label: string; icon: React.ReactNode }[] = [
     {
       id: "dashboard",
       label: "Dashboard",
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 14 14" fill="none">
-          <rect x="1" y="1" width="5" height="5" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
-          <rect x="8" y="1" width="5" height="5" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
-          <rect x="1" y="8" width="5" height="5" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
-          <rect x="8" y="8" width="5" height="5" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
-        </svg>
-      ),
+      icon: <LayoutDashboard size={17} strokeWidth={1.3} />,
     },
     {
       id: "vault",
       label: "Vault",
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 14 14" fill="none">
-          <path d="M7 1L2 3.5v4C2 10.5 7 13 7 13s5-2.5 5-5.5v-4L7 1z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
-          <path d="M5.5 7l1.5 1.5 2-2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      ),
+      icon: <ShieldCheck size={17} strokeWidth={1.3} />,
     },
   ];
 
@@ -54,9 +45,7 @@ export function Sidebar() {
             className="w-7 h-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text hover:bg-surface-tertiary transition-colors cursor-pointer bg-transparent border-none"
             title="Expand sidebar"
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M4.5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <ChevronRight size={14} strokeWidth={1.3} />
           </button>
         </div>
 
@@ -81,8 +70,19 @@ export function Sidebar() {
           ))}
         </div>
 
-        {/* Spacer */}
         <div className="flex-1" />
+
+        {/* Running indicator when collapsed */}
+        {runningCount > 0 && (
+          <div className="pb-2">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-success-light/30 relative" title={`${runningCount} running`}>
+              <Activity size={13} className="text-success-dark" />
+              <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-success text-[8px] font-bold text-white flex items-center justify-center">
+                {runningCount}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Add project */}
         <div className="pb-3">
@@ -91,9 +91,7 @@ export function Sidebar() {
             className="w-8 h-8 rounded-xl flex items-center justify-center text-text-muted hover:text-text hover:bg-surface-tertiary transition-colors cursor-pointer bg-transparent border-none"
             title="Add project"
           >
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-              <path d="M6.5 1.5v10M1.5 6.5h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-            </svg>
+            <Plus size={13} strokeWidth={1.4} />
           </button>
         </div>
 
@@ -119,9 +117,7 @@ export function Sidebar() {
               className="w-6 h-6 rounded-md flex items-center justify-center text-text-muted hover:text-text hover:bg-surface-tertiary transition-colors cursor-pointer bg-transparent border-none"
               title="Collapse sidebar"
             >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M9.5 3l-4 4 4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              <ChevronLeft size={14} strokeWidth={1.3} />
             </button>
           </div>
         </div>
@@ -137,58 +133,70 @@ export function Sidebar() {
                 setView(item.id);
                 if (item.id === "dashboard") useProjectStore.getState().setActiveProject(null);
               }}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all border w-full text-left ${
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer transition-all border w-full text-left ${
                 view === item.id && (item.id !== 'dashboard' || !useProjectStore.getState().activeProject)
-                  ? "bg-accent/10 border-accent/20 text-text font-semibold"
-                  : "bg-transparent border-transparent text-text-secondary hover:bg-surface-tertiary hover:text-text font-medium"
+                  ? "bg-accent/8 border-accent/15 text-text font-semibold"
+                  : "bg-transparent border-transparent text-text-secondary hover:bg-surface-tertiary/60 hover:text-text font-medium"
               }`}
             >
               <span className="shrink-0 flex items-center justify-center w-5 h-5">{item.icon}</span>
-              <span className="text-[14px]">{item.label}</span>
+              <span className="text-[13px]">{item.label}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Section label */}
-      <div className="px-4 pt-3 pb-1">
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider">
-            Projects
-          </span>
+      {/* Divider */}
+      <div className="px-4 py-1">
+        <div className="h-px bg-border-light/50" />
+      </div>
+
+      {/* Projects section header */}
+      <div className="px-4 pt-1 pb-1">
+        <button
+          onClick={() => setIsProjectsCollapsed(!isProjectsCollapsed)}
+          className="flex items-center justify-between w-full border-none bg-transparent cursor-pointer group p-0 m-0"
+        >
+          <div className="flex items-center gap-1.5">
+            <ChevronRight
+              size={10}
+              strokeWidth={1.5}
+              className={`text-text-muted transition-transform group-hover:text-text ${isProjectsCollapsed ? 'rotate-0' : 'rotate-90'}`}
+            />
+            <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider group-hover:text-text transition-colors">
+              Projects
+            </span>
+          </div>
           <span className="text-[11px] text-text-muted tabular-nums">
             {projects.length}
           </span>
-        </div>
+        </button>
       </div>
 
       {/* Project list */}
       <div className="flex-1 overflow-auto px-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-        <ProjectList />
+        {!isProjectsCollapsed && <ProjectList />}
+      </div>
+
+      {/* Divider */}
+      <div className="px-4">
+        <div className="h-px bg-border-light/50" />
       </div>
 
       {/* Add project button */}
-      <div className="p-2.5">
+      <div className="p-2">
         <button
           onClick={() => setShowAddDialog(true)}
-          className="w-full py-2 rounded-xl bg-transparent text-text-muted text-[13px] font-medium flex items-center justify-center gap-1.5 hover:bg-surface-tertiary hover:text-text transition-colors cursor-pointer border-none"
+          className="w-full py-2 rounded-lg bg-transparent text-text-muted text-[12px] font-medium flex items-center justify-center gap-1.5 hover:bg-surface-tertiary hover:text-text transition-colors cursor-pointer border-none"
         >
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-            <path
-              d="M6.5 1.5v10M1.5 6.5h10"
-              stroke="currentColor"
-              strokeWidth="1.4"
-              strokeLinecap="round"
-            />
-          </svg>
+          <Plus size={12} strokeWidth={1.5} />
           Add Project
         </button>
       </div>
 
-      {/* Running now section */}
+      {/* Running now section — always shows footer when processes running */}
       <RunningSection running={running} />
 
-      {/* Add project dialog */}
       {showAddDialog && (
         <AddProjectDialog onClose={() => setShowAddDialog(false)} />
       )}
@@ -208,43 +216,39 @@ function RunningSection({ running }: { running: Record<string, RunningCommandInf
 
   return (
     <div className="px-2 pb-2">
-      <div className="px-2 pt-2 pb-1">
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider">
-            Running now
+      <div className="rounded-lg bg-success-light/20 border border-success/10 p-2">
+        <div className="flex items-center gap-2 mb-1.5 px-1">
+          <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse-soft" />
+          <span className="text-[10px] font-bold text-success-dark uppercase tracking-wider">
+            Running
           </span>
-          <span className="text-[11px] text-success-dark tabular-nums">
+          <span className="text-[10px] text-success-dark/70 tabular-nums ml-auto">
             {runningEntries.length}
           </span>
         </div>
-      </div>
-      <div className="flex flex-col gap-0.5">
-        {runningEntries.map((entry) => (
-          <div
-            key={entry.commandId}
-            className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg hover:bg-surface-tertiary transition-colors group cursor-default"
-          >
-            <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse-soft shrink-0" />
-            <span className="text-[11px] text-text truncate flex-1">
-              {entry.commandId.split(":").pop() || entry.commandId}
-            </span>
-            <button
-              onClick={() => {
-                if (activeProject?.path) {
-                  commands.openTerminalAt(activeProject.path);
-                }
-              }}
-              className="w-5 h-5 rounded flex items-center justify-center text-text-muted opacity-0 group-hover:opacity-100 hover:text-text hover:bg-border-light transition-all cursor-pointer bg-transparent border-none shrink-0"
-              title="Open terminal"
+        <div className="flex flex-col gap-0.5">
+          {runningEntries.map((entry) => (
+            <div
+              key={entry.commandId}
+              className="flex items-center gap-2 py-1 px-1.5 rounded-md hover:bg-success-light/30 transition-colors group cursor-default"
             >
-              <svg width="9" height="9" viewBox="0 0 11 11" fill="none">
-                <rect x="0.5" y="1" width="10" height="9" rx="1.5" stroke="currentColor" strokeWidth="0.8" />
-                <path d="M2 4l2 2-2 2" stroke="currentColor" strokeWidth="0.9" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M5.5 8h3" stroke="currentColor" strokeWidth="0.9" strokeLinecap="round" />
-              </svg>
-            </button>
-          </div>
-        ))}
+              <span className="text-[11px] text-text truncate flex-1">
+                {entry.commandId.split(":").pop() || entry.commandId}
+              </span>
+              <button
+                onClick={() => {
+                  if (activeProject?.path) {
+                    commands.openTerminalAt(activeProject.path);
+                  }
+                }}
+                className="w-5 h-5 rounded flex items-center justify-center text-text-muted opacity-0 group-hover:opacity-100 hover:text-text transition-all cursor-pointer bg-transparent border-none shrink-0"
+                title="Open terminal"
+              >
+                <Terminal size={9} strokeWidth={1} />
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

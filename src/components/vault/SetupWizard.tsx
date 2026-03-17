@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useVaultStore } from "../../stores/vaultStore";
 import { useProjectStore } from "../../stores/projectStore";
 import { listEnvFiles, readEnvFile } from "../../lib/commands";
+import { Wand2, ChevronRight, Check } from "lucide-react";
 
 type WizardStep = "source" | "detect" | "review" | "done";
 
@@ -132,9 +133,7 @@ export function SetupWizard() {
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-accent">
-              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-            </svg>
+            <Wand2 size={20} strokeWidth={1.5} className="text-accent" />
           </div>
           <div>
             <h1 className="text-lg font-semibold text-text">Setup Wizard</h1>
@@ -182,9 +181,7 @@ export function SetupWizard() {
                   className="w-full text-left px-4 py-3 rounded-xl border border-border-light bg-surface hover:bg-surface-secondary transition-colors cursor-pointer flex items-center justify-between"
                 >
                   <span className="text-sm font-medium text-text">{file}</span>
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-                  </svg>
+                  <ChevronRight size={14} strokeWidth={1.3} />
                 </button>
               ))
             )}
@@ -258,9 +255,7 @@ export function SetupWizard() {
         {step === "done" && (
           <div className="text-center py-8">
             <div className="w-16 h-16 rounded-full bg-green-500/15 flex items-center justify-center mx-auto mb-4">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-500">
-                <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              <Check size={32} strokeWidth={2} className="text-green-500" />
             </div>
             <h2 className="text-lg font-semibold text-text mb-2">Import Complete</h2>
             <p className="text-sm text-text-secondary max-w-sm mx-auto">{resultMessage}</p>

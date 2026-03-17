@@ -2,6 +2,7 @@ import { useProjectStore } from "@/stores/projectStore";
 import { useEnvironmentStore } from "@/stores/environmentStore";
 import { useCommandStore } from "@/stores/commandStore";
 import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 
 export function EnvSelectorBar() {
   const { activeProject } = useProjectStore();
@@ -44,21 +45,11 @@ export function EnvSelectorBar() {
           <span className="text-[11px] font-medium text-text">
             {currentEnv}
           </span>
-          <svg
-            width="10"
-            height="10"
-            viewBox="0 0 10 10"
-            fill="none"
+          <ChevronDown
+            size={10}
+            strokeWidth={1.2}
             className="opacity-50"
-          >
-            <path
-              d="M2 4l3 3 3-3"
-              stroke="currentColor"
-              strokeWidth="1.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          />
         </button>
 
         {showDropdown && (

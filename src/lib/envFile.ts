@@ -80,3 +80,57 @@ export function getSourceFileName(source: string | null): string | null {
   const parts = normalized.split("/");
   return parts[parts.length - 1] ?? null;
 }
+
+export function deleteEnvValue(content: string, key: string): string {
+  if (!content) return "";
+  
+  const lineEnding = getLineEnding(content);
+  const regex = getAssignmentRegex(key);
+  const lines = content.split(/\r?\n/);
+
+  const nextLines: string[] = [];
+  let i = 0;
+  
+  while (i < lines.length) {
+    const line = lines[i]!;
+    const trimmed = line.trim();
+    
+    if (!trimmed || trimmed.startsWith("#")) {
+      nextLines.push(line);
+      i++;
+      continue;
+    }
+
+    const match = line.match(regex);
+    if (match) {
+      // Key found. Let's see if the value starts with a quote and doesn't end with it on the same line.
+      const value = match[1]?.trim() || "";
+      let skipCount = 1;
+      
+      if (value.startsWith('"') || value.startsWith("'")) {
+        const quoteType = value.charAt(0);
+        // If it does not end with the quote (or is just one character), it may be multiline
+        if (value.length === 1 || !value.endsWith(quoteType)) {
+          while (i + skipCount < lines.length) {
+            const nextLine = lines[i + skipCount]!;
+            const nextTrimmed = nextLine.trim();
+            if (nextTrimmed.endsWith(quoteType)) {
+              skipCount++;
+              break;
+            }
+            skipCount++;
+          }
+        }
+      }
+      // Skip the lines belonging to this key
+      i += skipCount;
+    } else {
+      nextLines.push(line);
+      i++;
+    }
+  }
+
+  const joined = nextLines.join(lineEnding);
+  if (joined.length === 0) return "";
+  return joined;
+}

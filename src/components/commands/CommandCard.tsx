@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Play } from "lucide-react";
+import { Play, Terminal, Square } from "lucide-react";
 import type { DiscoveredCommand } from "@/lib/types";
 import { useCommandStore } from "@/stores/commandStore";
 import { useProjectStore } from "@/stores/projectStore";
@@ -75,28 +75,27 @@ export function CommandCard({ command }: CommandCardProps) {
   return (
     <>
       <div
-        className={`flex items-center gap-3 px-3 py-2 rounded-xl border transition-all ${
+        className={`flex items-center gap-3 px-3.5 py-3 rounded-lg transition-all group ${
           isRunning
-            ? "border-success/40 bg-success-light/20"
-            : "border-border-light bg-surface-secondary hover:bg-surface-secondary/50"
+            ? "bg-success-light/30 border-l-2 border-l-success"
+            : "hover:bg-surface-secondary/60"
         }`}
       >
-
-        {/* Name + command */}
-        <div className="flex-1 min-w-0 flex flex-col md:flex-row md:items-baseline gap-1 md:gap-3">
-          <div className="text-[14px] font-mono font-bold text-text truncate">
-            {command.rawCmd}
-          </div>
-          <div className="text-[12px] text-text-muted truncate">
+        {/* Name + command — flipped hierarchy */}
+        <div className="flex-1 min-w-0">
+          <div className="text-[13px] font-semibold text-text truncate">
             {command.name}
+          </div>
+          <div className="text-[11px] font-mono text-text-muted truncate mt-0.5">
+            {command.rawCmd}
           </div>
         </div>
 
-        {/* Launched indicator + uptime */}
+        {/* Running state badge */}
         {isRunning && (
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0 bg-success-light rounded-full px-2 py-0.5">
             <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse-soft" />
-            <span className="text-[11px] font-mono text-success-dark">{uptime}</span>
+            <span className="text-[10px] font-mono font-medium text-success-dark">{uptime}</span>
           </div>
         )}
 
@@ -104,65 +103,61 @@ export function CommandCard({ command }: CommandCardProps) {
         {errors && errors.length > 0 && (
           <button
             onClick={() => clearError(command.id)}
-            className="text-[11px] px-2 py-0.5 rounded-full bg-danger-light text-danger-dark font-medium shrink-0 cursor-pointer border-none"
+            className="text-[10px] px-2 py-0.5 rounded-full bg-danger-light text-danger-dark font-medium shrink-0 cursor-pointer border-none"
             title={errors.join(", ")}
           >
             ⚠ {errors[0]?.substring(0, 30)}
           </button>
         )}
 
-        {/* Terminal button — opens OS terminal at project (always available) */}
+        {/* Terminal button */}
         <button
           onClick={isRunning ? handleOpenTerminal : handleRunInTerminal}
-          className="w-6 h-6 rounded-md flex items-center justify-center text-text-muted hover:text-text hover:bg-surface-tertiary transition-colors cursor-pointer bg-transparent border-none shrink-0"
+          className="w-7 h-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text hover:bg-surface-tertiary transition-colors cursor-pointer bg-transparent border-none shrink-0 opacity-0 group-hover:opacity-100"
           title={isRunning ? "Open terminal at project" : "Run in terminal"}
         >
-          <svg width="10" height="10" viewBox="0 0 11 11" fill="none">
-            <rect x="0.5" y="1" width="10" height="9" rx="1.5" stroke="currentColor" strokeWidth="0.8" />
-            <path d="M2 4l2 2-2 2" stroke="currentColor" strokeWidth="0.9" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M5.5 8h3" stroke="currentColor" strokeWidth="0.9" strokeLinecap="round" />
-          </svg>
+          <Terminal size={12} strokeWidth={1.2} />
         </button>
 
-        {/* Play / Launched state */}
+        {/* Play / Stop */}
         {isRunning ? (
           <button
             onClick={handleDismiss}
-            className="h-7 px-2.5 rounded-md bg-success-light text-success-dark text-[11px] font-medium border border-success/30 hover:bg-surface-secondary cursor-pointer flex items-center gap-1 shrink-0"
+            className="h-8 w-8 rounded-lg bg-success-light text-success-dark border border-success/20 hover:bg-danger-light hover:text-danger-dark hover:border-danger/20 cursor-pointer flex items-center justify-center shrink-0 transition-colors"
             title="Dismiss — terminal still runs in OS"
           >
-            ✓ Launched
+            <Square size={10} fill="currentColor" />
           </button>
         ) : (
           <button
             onClick={handlePlay}
-            className="h-7 px-3 rounded-md bg-accent text-white text-[11px] font-semibold hover:bg-accent-hover cursor-pointer border-none flex items-center gap-1.5 shrink-0"
+            className="h-8 w-8 rounded-lg bg-accent text-white hover:bg-accent-hover cursor-pointer border-none flex items-center justify-center shrink-0 shadow-sm transition-colors"
           >
-            <Play size={10} fill="currentColor" className="opacity-90" /> Play
+            <Play size={11} fill="currentColor" />
           </button>
         )}
       </div>
 
       {/* Production confirmation modal */}
       {showConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-surface rounded-2xl p-5 max-w-sm w-full shadow-xl border border-border-light animate-scale-in">
             <div className="text-[14px] font-semibold text-text mb-2">
               ⚠ Production Safety Guard
             </div>
-            <div className="text-[12px] text-text-secondary mb-3">
-              Run <span className="font-mono font-medium">{command.rawCmd}</span> on <span className="text-danger font-medium">{currentEnv}</span>?
+            <div className="text-[12px] text-text-secondary mb-4 leading-5">
+              Run <span className="font-mono font-medium bg-surface-tertiary px-1.5 py-0.5 rounded">{command.rawCmd}</span> on <span className="text-danger font-medium">{currentEnv}</span>?
             </div>
             <div className="flex gap-2 justify-end">
               <button
                 onClick={() => setShowConfirm(false)}
-                className="px-3 py-1.5 rounded-lg bg-surface-secondary text-text-secondary text-[11px] font-medium cursor-pointer border-none"
+                className="px-4 py-2 rounded-lg bg-surface-secondary text-text-secondary text-[12px] font-medium cursor-pointer border-none hover:bg-surface-tertiary transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmedPlay}
-                className="px-3 py-1.5 rounded-lg bg-danger text-white text-[11px] font-medium cursor-pointer border-none"
+                className="px-4 py-2 rounded-lg bg-danger text-white text-[12px] font-medium cursor-pointer border-none hover:opacity-90 transition-colors"
               >
                 Run on {currentEnv}
               </button>

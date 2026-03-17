@@ -1,5 +1,6 @@
 import type { Project } from "@/lib/types";
 import { STATUS_COLORS } from "@/lib/constants";
+import { Pin, FolderOpen } from "lucide-react";
 
 interface ProjectItemProps {
   project: Project;
@@ -14,18 +15,15 @@ interface ProjectItemProps {
   onDrop?: (e: React.DragEvent) => void;
 }
 
-import { Pin } from "lucide-react";
-
 /**
- * Single project row — macOS sidebar source list item with folder icon.
- * Uses a <div> with role="button" to avoid nested <button> HTML violations.
+ * Project sidebar item — clean row with accent left border for active state.
  */
-export function ProjectItem({ 
-  project, 
-  isActive, 
-  isPinned, 
-  onPin, 
-  onUnpin, 
+export function ProjectItem({
+  project,
+  isActive,
+  isPinned,
+  onPin,
+  onUnpin,
   onClick,
   draggable,
   onDragStart,
@@ -47,34 +45,24 @@ export function ProjectItem({
         tabIndex={0}
         onClick={onClick}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onClick(); }}
-        className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-all w-full text-left rounded-xl border ${
+        className={`flex items-center gap-2.5 px-3 py-2 cursor-pointer transition-all w-full text-left rounded-lg relative ${
           isActive
-            ? "bg-accent/10 border-accent/20"
-            : "bg-transparent border-transparent hover:bg-surface-tertiary"
+            ? "bg-accent/8"
+            : "bg-transparent hover:bg-surface-tertiary/60"
         }`}
       >
-        {/* Folder icon */}
-        <div className="w-5 h-5 flex items-center justify-center shrink-0">
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 14 14"
-            fill="none"
-            className={isActive ? "text-text" : "text-text-muted"}
-          >
-            <path
-              d="M1.5 4V10.5C1.5 11.0523 1.94772 11.5 2.5 11.5H11.5C12.0523 11.5 12.5 11.0523 12.5 10.5V5.5C12.5 4.94772 12.0523 4.5 11.5 4.5H7.5L6 3H2.5C1.94772 3 1.5 3.44772 1.5 4Z"
-              stroke="currentColor"
-              strokeWidth="1.2"
-              strokeLinejoin="round"
-            />
-          </svg>
+        <div className="w-4.5 h-4.5 flex items-center justify-center shrink-0">
+          <FolderOpen
+            size={15}
+            strokeWidth={1.3}
+            className={isActive ? "text-accent" : "text-text-muted group-hover:text-text-secondary"}
+          />
         </div>
 
         {/* Name */}
-        <div className="overflow-hidden flex-1 min-w-0 flex flex-col justify-center">
+        <div className="overflow-hidden flex-1 min-w-0">
           <div
-            className={`text-[14px] truncate ${
+            className={`text-[13px] truncate ${
               isActive ? "text-text font-semibold" : "text-text font-medium"
             }`}
           >
@@ -82,26 +70,29 @@ export function ProjectItem({
           </div>
         </div>
 
-        {/* Status dot or pin toggle */}
+        {/* Status dot + pin */}
         <div className="flex items-center gap-1.5 shrink-0">
+          {/* Pin — always visible at low opacity, full on hover/pinned */}
           {!isActive && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 isPinned ? onUnpin?.() : onPin?.();
               }}
-              className={`p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-surface-secondary cursor-pointer border-none bg-transparent flex items-center justify-center ${
-                isPinned ? "text-accent opacity-100" : "text-text-muted"
+              className={`p-0.5 rounded transition-opacity hover:bg-surface-secondary cursor-pointer border-none bg-transparent flex items-center justify-center ${
+                isPinned ? "text-accent opacity-80" : "text-text-muted opacity-0 group-hover:opacity-60"
               }`}
               title={isPinned ? "Unpin project" : "Pin project"}
             >
-              <Pin size={12} fill={isPinned ? "currentColor" : "none"} />
+              <Pin size={10} fill={isPinned ? "currentColor" : "none"} />
             </button>
           )}
+          {/* Status dot with ring */}
           <div
-            className="w-[7px] h-[7px] rounded-full"
+            className="w-[7px] h-[7px] rounded-full ring-2"
             style={{
               backgroundColor: statusColor,
+              boxShadow: `0 0 0 2px ${statusColor}20`,
             }}
           />
         </div>

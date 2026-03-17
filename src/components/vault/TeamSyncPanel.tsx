@@ -5,15 +5,13 @@
  * Actual sync functionality will be implemented when Varlock Cloud is ready.
  */
 
+import { Users } from "lucide-react";
+
 export function TeamSyncPanel() {
   return (
     <div className="bg-surface-secondary rounded-xl border border-border-light p-5">
       <h3 className="text-sm font-semibold text-text mb-1 flex items-center gap-2">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" strokeLinecap="round" />
-          <circle cx="9" cy="7" r="4" />
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" strokeLinecap="round" />
-        </svg>
+        <Users size={16} className="text-accent" />
         Team Sync
         <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-accent/10 text-accent uppercase tracking-wider">
           Coming Soon

@@ -39,32 +39,26 @@ export const STATUS_COLORS = {
 } as const;
 
 /** Environment badge colors — soft pastels with readable text */
-export const ENV_BADGE_STYLES: Record<
-  string,
-  { bg: string; text: string }
-> = {
-  development: { bg: "#E8FAE9", text: "#1E7A2E" },
-  production: { bg: "#FFEDED", text: "#A51D14" },
-  test: { bg: "#FFF4E5", text: "#8A4D00" },
-  staging: { bg: "#E8F2FF", text: "#0055B3" },
-  preview: { bg: "#F3EDFF", text: "#6E36D6" },
+export const ENV_BADGE_STYLES: Record<string, string> = {
+  development: "bg-success-light text-success-dark border border-success/10",
+  production: "bg-danger-light text-danger-dark border border-danger/10",
+  test: "bg-warning-light text-warning-dark border border-warning/10",
+  staging: "bg-accent-light text-accent border border-accent/10",
+  preview: "bg-surface-tertiary text-text border border-border-light",
 };
 
 /** Variable type badge colors */
-export const TYPE_BADGE_STYLES: Record<
-  string,
-  { bg: string; text: string }
-> = {
-  url: { bg: "#E8F2FF", text: "#0055B3" },
-  string: { bg: "#F0F0F2", text: "#6E6E73" },
-  port: { bg: "#E8FAE9", text: "#1E7A2E" },
-  enum: { bg: "#FFF4E5", text: "#8A4D00" },
-  number: { bg: "#F3EDFF", text: "#6E36D6" },
-  boolean: { bg: "#E8FAE9", text: "#1E7A2E" },
+export const TYPE_BADGE_STYLES: Record<string, string> = {
+  url: "bg-accent-light text-accent border border-accent/10",
+  string: "bg-surface-tertiary text-text-secondary border border-border-light",
+  port: "bg-success-light text-success-dark border border-success/10",
+  enum: "bg-warning-light text-warning-dark border border-warning/10",
+  number: "bg-surface-tertiary text-text border border-border-light",
+  boolean: "bg-success-light text-success-dark border border-success/10",
 };
 
 /** Default environment badge style for unknown environments */
-export const DEFAULT_ENV_BADGE = { bg: "#F0F0F2", text: "#6E6E73" };
+export const DEFAULT_ENV_BADGE = "bg-surface-tertiary text-text-secondary border border-border-light";
 
 /** Default type badge style for unknown types */
-export const DEFAULT_TYPE_BADGE = { bg: "#F0F0F2", text: "#6E6E73" };
+export const DEFAULT_TYPE_BADGE = "bg-surface-tertiary text-text-secondary border border-border-light";

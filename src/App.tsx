@@ -5,6 +5,7 @@ import { useVarlockCommand } from "@/hooks/useVarlockCommand";
 import { useVaultStore } from "@/stores/vaultStore";
 import { VaultUnlockScreen } from "@/components/vault/VaultUnlockScreen";
 import type { VarlockStatus } from "@/lib/types";
+import { Check, Terminal } from "lucide-react";
 
 export default function App() {
   const loadProjects = useProjectStore((s) => s.loadProjects);
@@ -60,9 +61,7 @@ export default function App() {
       <div className="h-screen w-screen flex items-center justify-center bg-surface">
         <div className="text-center animate-fade-in">
           <div className="w-10 h-10 rounded-xl bg-accent mx-auto mb-4 animate-pulse-soft flex items-center justify-center">
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-              <path d="M4 6l5 5 5-5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <Check size={18} strokeWidth={1.5} color="white" aria-hidden="true" />
           </div>
           <p className="text-text-secondary text-sm">Starting Varlock...</p>
         </div>
@@ -77,9 +76,7 @@ export default function App() {
         <div className="text-center max-w-md px-6 animate-fade-in">
           <div className="w-14 h-14 rounded-2xl bg-accent-light border border-accent/15 flex items-center justify-center mx-auto mb-5 shadow-sm">
             <div className="w-6 h-6 rounded-lg bg-accent flex items-center justify-center">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                <path d="M7 3v8M3 7h8" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
+              <Terminal size={14} strokeWidth={1.5} color="white" aria-hidden="true" />
             </div>
           </div>
           <h1 className="text-xl font-semibold text-text mb-2">

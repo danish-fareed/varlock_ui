@@ -3,14 +3,13 @@ import { useProjectStore } from "@/stores/projectStore";
 import { ProjectItem } from "./ProjectItem";
 
 /**
- * Renders the project list in the sidebar — macOS source list style.
- * Supports Pinned Projects with drag-and-drop reordering.
+ * Renders the project list in the sidebar with Pinned and All sections.
  */
 export function ProjectList() {
-  const { 
-    projects, 
-    activeProject, 
-    setActiveProject, 
+  const {
+    projects,
+    activeProject,
+    setActiveProject,
     isLoading,
     pinnedProjectIds,
     pinProject,
@@ -25,7 +24,7 @@ export function ProjectList() {
     return (
       <div className="px-3 py-6 text-center">
         <div className="w-5 h-5 rounded-full bg-sidebar-hover animate-pulse-soft mx-auto mb-2" />
-        <p className="text-[11px] text-text-muted">Loading projects...</p>
+        <p className="text-[11px] text-text-muted">Loading projects…</p>
       </div>
     );
   }
@@ -41,11 +40,10 @@ export function ProjectList() {
     );
   }
 
-  // Get pinned and other projects
   const pinnedProjects = pinnedProjectIds
     .map(id => projects.find(p => p.id === id))
     .filter(Boolean) as any[];
-  
+
   const otherProjects = projects.filter(p => !pinnedProjectIds.includes(p.id));
 
   const handleDragStart = (id: string) => {
@@ -72,40 +70,51 @@ export function ProjectList() {
   };
 
   return (
-    <div className="flex flex-col gap-4 py-1">
+    <div className="flex flex-col gap-0.5 py-1">
       {/* Pinned Projects Section */}
       {pinnedProjects.length > 0 && (
-        <div className="flex flex-col gap-0.5">
-          <div className="px-3 mb-1">
-            <h3 className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Pinned</h3>
+        <>
+          <div className="px-3.5 pt-1 pb-1">
+            <span className="text-[10px] font-semibold text-text-muted/60 uppercase tracking-widest">
+              Pinned
+            </span>
           </div>
-          {pinnedProjects.map((project) => (
-            <ProjectItem
-              key={`pinned-${project.id}`}
-              project={project}
-              isActive={activeProject?.id === project.id}
-              isPinned={true}
-              onUnpin={() => unpinProject(project.id)}
-              onClick={() => {
-                setActiveProject(project);
-                setView("dashboard");
-              }}
-              draggable={true}
-              onDragStart={() => handleDragStart(project.id)}
-              onDragOver={(e) => handleDragOver(e, project.id)}
-              onDrop={handleDragEnd}
-            />
-          ))}
-        </div>
+          <div className="flex flex-col gap-0.5">
+            {pinnedProjects.map((project) => (
+              <ProjectItem
+                key={`pinned-${project.id}`}
+                project={project}
+                isActive={activeProject?.id === project.id}
+                isPinned={true}
+                onUnpin={() => unpinProject(project.id)}
+                onClick={() => {
+                  setActiveProject(project);
+                  setView("dashboard");
+                }}
+                draggable={true}
+                onDragStart={() => handleDragStart(project.id)}
+                onDragOver={(e) => handleDragOver(e, project.id)}
+                onDrop={handleDragEnd}
+              />
+            ))}
+          </div>
+
+          {/* Separator */}
+          <div className="px-4 py-1">
+            <div className="h-px bg-border-light/40 w-full" />
+          </div>
+        </>
       )}
 
       {/* All Projects Section */}
+      {pinnedProjects.length > 0 && otherProjects.length > 0 && (
+        <div className="px-3.5 pt-0.5 pb-1">
+          <span className="text-[10px] font-semibold text-text-muted/60 uppercase tracking-widest">
+            All
+          </span>
+        </div>
+      )}
       <div className="flex flex-col gap-0.5">
-        {pinnedProjects.length > 0 && (
-          <div className="px-3 mb-1">
-            <h3 className="text-[10px] font-bold text-text-muted uppercase tracking-wider">All Projects</h3>
-          </div>
-        )}
         {otherProjects.map((project) => (
           <ProjectItem
             key={project.id}

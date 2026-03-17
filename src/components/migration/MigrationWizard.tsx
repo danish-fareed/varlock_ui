@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useProjectStore } from "@/stores/projectStore";
 import { useVarlockCommand } from "@/hooks/useVarlockCommand";
 import * as commands from "@/lib/commands";
+import { Check, FolderSearch } from "lucide-react";
 import type {
   MigrationPlan,
   MigrationApplyResult,
@@ -291,21 +292,7 @@ function StepIndicator({
       }}
     >
       {isDone ? (
-        <svg
-          width="10"
-          height="10"
-          viewBox="0 0 10 10"
-          fill="none"
-          aria-hidden="true"
-        >
-          <path
-            d="M2 5l2.5 2.5L8 3"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <Check size={10} strokeWidth={1.5} aria-hidden="true" />
       ) : (
         index + 1
       )}
@@ -404,21 +391,12 @@ function LocateStep({
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-4">
       <div className="w-12 h-12 rounded-2xl bg-accent-light border border-accent/15 flex items-center justify-center shadow-sm">
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 20 20"
-          fill="none"
+        <FolderSearch
+          size={20}
+          strokeWidth={1.2}
           className="text-accent"
           aria-hidden="true"
-        >
-          <path
-            d="M3 5v10a1 1 0 001 1h12a1 1 0 001-1V8a1 1 0 00-1-1h-6L8.5 5H4a1 1 0 00-1 1z"
-            stroke="currentColor"
-            strokeWidth="1.2"
-            strokeLinejoin="round"
-          />
-        </svg>
+        />
       </div>
       <div className="text-center">
         <p className="text-sm font-medium text-text mb-1">{dirName}</p>
@@ -590,22 +568,12 @@ function DoneStep({ result }: { result: MigrationApplyResult }) {
     <div className="flex-1 flex flex-col items-center justify-center gap-4 animate-fade-in">
       {/* Success icon */}
       <div className="w-14 h-14 rounded-2xl bg-success-light border border-success/20 flex items-center justify-center shadow-sm">
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
+        <Check
+          size={24}
+          strokeWidth={2}
           className="text-success"
           aria-hidden="true"
-        >
-          <path
-            d="M5 13l4 4L19 7"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        />
       </div>
 
       <div className="text-center max-w-sm">

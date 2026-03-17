@@ -1,4 +1,5 @@
 import { useProjectStore } from "@/stores/projectStore";
+import { Folder } from "lucide-react";
 
 export function DashboardPage() {
   const { projects } = useProjectStore();
@@ -44,9 +45,7 @@ function ProjectCard({ project }: { project: any }) {
       className="text-left bg-surface rounded-xl p-3 border border-border-light hover:bg-surface-secondary hover:border-border transition-all cursor-pointer group flex items-center gap-3"
     >
       <div className="w-10 h-10 rounded-lg bg-surface-secondary border border-border-light flex items-center justify-center shrink-0">
-        <svg width="16" height="16" viewBox="0 0 14 14" fill="none" className="text-text-muted group-hover:text-text transition-colors">
-          <path d="M1.5 4V10.5C1.5 11.0523 1.94772 11.5 2.5 11.5H11.5C12.0523 11.5 12.5 11.0523 12.5 10.5V5.5C12.5 4.94772 12.0523 4.5 11.5 4.5H7.5L6 3H2.5C1.94772 3 1.5 3.44772 1.5 4Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
-        </svg>
+        <Folder size={16} strokeWidth={1.2} className="text-text-muted group-hover:text-text transition-colors" />
       </div>
 
       <div className="min-w-0 flex-1">

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Layers } from "lucide-react";
 import { useVaultStore } from "../../stores/vaultStore";
 import type { SecretType } from "../../lib/types";
 
@@ -48,9 +49,7 @@ export function SecretGenerator({ onInsert }: SecretGeneratorProps) {
   return (
     <div className="bg-surface-secondary rounded-xl border border-border-light p-5">
       <h3 className="text-sm font-semibold text-text mb-4 flex items-center gap-2">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent">
-          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        <Layers size={16} className="text-accent" />
         Secret Generator
       </h3>
 

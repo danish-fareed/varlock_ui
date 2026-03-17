@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Info } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { useProjectStore } from "../../stores/projectStore";
 
@@ -47,10 +48,7 @@ export function AiContextPanel() {
   return (
     <div className="bg-surface-secondary rounded-xl border border-border-light p-5">
       <h3 className="text-sm font-semibold text-text mb-1 flex items-center gap-2">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent">
-          <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z" />
-          <path d="M12 16v-4M12 8h.01" strokeLinecap="round" />
-        </svg>
+        <Info size={16} className="text-accent" />
         AI Context Generator
       </h3>
       <p className="text-xs text-text-muted mb-4">

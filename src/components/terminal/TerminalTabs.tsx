@@ -1,5 +1,6 @@
 import { useTerminalStore } from "@/stores/terminalStore";
 import { ENV_BADGE_STYLES, DEFAULT_ENV_BADGE } from "@/lib/constants";
+import { X } from "lucide-react";
 
 /**
  * Tab bar for multiple terminal sessions.
@@ -40,8 +41,7 @@ export function TerminalTabs() {
               >
                 {/* Env badge dot */}
                 <span
-                  className="w-1.5 h-1.5 rounded-full shrink-0"
-                  style={{ background: badge.text }}
+                  className={`w-1.5 h-1.5 rounded-full ${badge.split(' ')[1]}`} // Extract text-* class for dot color
                 />
                 <span className="truncate max-w-[120px] font-medium">
                   {shortCmd}
@@ -56,20 +56,7 @@ export function TerminalTabs() {
                 aria-label={`Close ${session.env}: ${session.command}`}
                 className="shrink-0 w-4 h-4 flex items-center justify-center rounded cursor-pointer border-none bg-transparent text-text-muted hover:text-text hover:bg-surface-tertiary"
               >
-                <svg
-                  width="7"
-                  height="7"
-                  viewBox="0 0 8 8"
-                  fill="none"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M1 1l6 6M7 1l-6 6"
-                    stroke="currentColor"
-                    strokeWidth="1.2"
-                    strokeLinecap="round"
-                  />
-                </svg>
+                <X size={10} strokeWidth={1.5} aria-hidden="true" />
               </button>
             </div>
           );

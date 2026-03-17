@@ -5,6 +5,7 @@ import { useTerminalStore, isDangerousEnv } from "@/stores/terminalStore";
 import { TerminalInstance, type TerminalInstanceHandle } from "./TerminalInstance";
 import { TerminalTabs } from "./TerminalTabs";
 import { ENV_BADGE_STYLES, DEFAULT_ENV_BADGE } from "@/lib/constants";
+import { ChevronDown, Square, Play, Terminal, CircleAlert } from "lucide-react";
 
 /**
  * Redesigned terminal panel — full-width terminal with top toolbar.
@@ -149,13 +150,10 @@ export function TerminalPanel() {
             className="h-8 px-2.5 rounded-lg border border-border bg-surface-secondary text-[12px] font-medium flex items-center gap-2 hover:border-accent/50 transition-colors cursor-pointer"
           >
             <span
-              className="w-2 h-2 rounded-full shrink-0"
-              style={{ backgroundColor: envBadge.text }}
+              className={`w-2 h-2 rounded-full shrink-0 ${envBadge.split(' ')[1]}`}
             />
             <span className="text-text">{activeEnv}</span>
-            <svg width="8" height="8" viewBox="0 0 8 8" fill="none" className="text-text-muted ml-0.5">
-              <path d="M1.5 3L4 5.5L6.5 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <ChevronDown size={12} strokeWidth={1.5} className="text-text-muted ml-0.5" />
           </button>
 
           {/* Dropdown */}
@@ -172,24 +170,23 @@ export function TerminalPanel() {
                   return (
                     <button
                       key={env}
-                      onClick={() => {
-                        setActiveEnv(env);
-                        setShowEnvDropdown(false);
-                      }}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-[12px] text-left cursor-pointer border-none transition-colors ${
-                        isActive
-                          ? "bg-accent text-white"
-                          : "bg-transparent text-text hover:bg-surface-secondary"
-                      }`}
-                    >
-                      <span
-                        className="w-2 h-2 rounded-full shrink-0"
-                        style={{
-                          backgroundColor: isActive ? "currentColor" : badge.text,
+                        onClick={() => {
+                          setActiveEnv(env);
+                          setShowEnvDropdown(false);
                         }}
-                      />
-                      <span className="font-medium">.env.{env}</span>
-                    </button>
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 text-[12px] text-left cursor-pointer border-none transition-colors ${
+                          isActive
+                            ? "bg-accent text-white"
+                            : "bg-transparent text-text hover:bg-surface-secondary"
+                        }`}
+                      >
+                        <span
+                          className={`w-2 h-2 rounded-full shrink-0 ${
+                            isActive ? "bg-white" : badge.split(' ')[1]
+                          }`}
+                        />
+                        <span className="font-medium">.env.{env}</span>
+                      </button>
                   );
                 })}
               </div>
@@ -216,9 +213,7 @@ export function TerminalPanel() {
             onClick={handleStop}
             className="h-8 px-4 bg-danger text-white border-none rounded-lg text-[12px] font-medium hover:bg-danger-dark transition-colors cursor-pointer shadow-sm flex items-center gap-1.5"
           >
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-              <rect x="1" y="1" width="8" height="8" rx="1" fill="currentColor" />
-            </svg>
+            <Square size={10} fill="currentColor" strokeWidth={0} />
             Stop
           </button>
         ) : (
@@ -234,9 +229,7 @@ export function TerminalPanel() {
               </>
             ) : (
               <>
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                  <path d="M2 1v8l7-4-7-4z" fill="currentColor" />
-                </svg>
+                <Play size={10} fill="currentColor" strokeWidth={0} />
                 Run
               </>
             )}
@@ -253,22 +246,7 @@ export function TerminalPanel() {
           <div className="flex items-center justify-center h-full bg-[#1C1C1E]">
             <div className="text-center">
               <div className="w-10 h-10 rounded-xl bg-[#2C2C2E] flex items-center justify-center mx-auto mb-3">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  className="text-[#34C759]"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M3 3l4 4-4 4M9 13h4"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+                <Terminal size={16} strokeWidth={1.5} className="text-[#34C759]" aria-hidden="true" />
               </div>
               <p className="text-sm text-[#98989D] mb-1">
                 Enter a command above and click Run
@@ -334,22 +312,7 @@ function ProductionWarningModal({
         {/* Header */}
         <div className="px-5 py-4 border-b border-border-light flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-danger-light flex items-center justify-center shrink-0">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-              className="text-danger"
-              aria-hidden="true"
-            >
-              <path
-                d="M8 5v3m0 2.5h.005M14 8A6 6 0 112 8a6 6 0 0112 0z"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            <CircleAlert size={16} strokeWidth={1.5} className="text-danger" aria-hidden="true" />
           </div>
           <h2
             id="prod-warning-title"

@@ -1,5 +1,6 @@
 import { useScanStore } from "@/stores/scanStore";
 import type { VarlockLeak } from "@/lib/types";
+import { CircleAlert, ShieldCheck, FileText } from "lucide-react";
 
 /**
  * ScanResultsPanel — displays results from `varlock scan`.
@@ -64,22 +65,7 @@ function ErrorState({ error }: { error: string | null }) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-4 animate-fade-in">
       <div className="w-14 h-14 rounded-2xl bg-danger-light border border-danger/20 flex items-center justify-center shadow-sm">
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          className="text-danger"
-          aria-hidden="true"
-        >
-          <path
-            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <CircleAlert size={24} strokeWidth={1.5} className="text-danger" aria-hidden="true" />
       </div>
       <div className="text-center max-w-sm">
         <h3 className="text-sm font-medium text-text mb-1">Scan failed</h3>
@@ -93,22 +79,7 @@ function CleanState() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-4 animate-fade-in">
       <div className="w-14 h-14 rounded-2xl bg-success-light border border-success/20 flex items-center justify-center shadow-sm">
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          className="text-success"
-          aria-hidden="true"
-        >
-          <path
-            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 12c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <ShieldCheck size={24} strokeWidth={1.5} className="text-success" aria-hidden="true" />
       </div>
       <div className="text-center max-w-sm">
         <h3 className="text-lg font-medium text-text mb-1">No leaks found</h3>
@@ -138,22 +109,7 @@ function FindingsView({
       {/* Summary banner */}
       <div className="rounded-xl border border-danger/20 bg-danger-light p-4 flex items-center gap-3 animate-fade-in">
         <div className="w-8 h-8 rounded-lg bg-danger/15 flex items-center justify-center shrink-0">
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="none"
-            className="text-danger"
-            aria-hidden="true"
-          >
-            <path
-              d="M8 5v3m0 2.5h.005M14 8A6 6 0 112 8a6 6 0 0112 0z"
-              stroke="currentColor"
-              strokeWidth="1.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <CircleAlert size={16} strokeWidth={1.5} className="text-danger" aria-hidden="true" />
         </div>
         <div>
           <p className="text-sm font-medium text-danger-dark">
@@ -182,21 +138,7 @@ function FileGroup({ file, leaks }: { file: string; leaks: VarlockLeak[] }) {
     <div className="rounded-xl border border-border-light overflow-hidden shadow-sm animate-fade-in">
       {/* File header */}
       <div className="px-4 py-2.5 bg-surface-secondary border-b border-border-light flex items-center gap-2">
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 14 14"
-          fill="none"
-          className="text-text-muted shrink-0"
-          aria-hidden="true"
-        >
-          <path
-            d="M3 2h5l3 3v7a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z"
-            stroke="currentColor"
-            strokeWidth="1"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <FileText size={14} strokeWidth={1.5} className="text-text-muted shrink-0" aria-hidden="true" />
         <span className="font-mono text-xs font-medium text-text">{file}</span>
         <span className="text-[11px] text-text-muted ml-auto">
           {leaks.length} finding{leaks.length !== 1 ? "s" : ""}

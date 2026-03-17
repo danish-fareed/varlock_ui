@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useVaultStore } from "@/stores/vaultStore";
 import { createPortal } from "react-dom";
+import { X, Shield, Wrench, Settings, Lock, Link, User } from "lucide-react";
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -75,7 +76,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               onClick={onClose}
               className="p-1.5 rounded-lg hover:bg-surface-secondary text-text-muted hover:text-text transition-colors cursor-pointer border-none bg-transparent"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              <X size={14} strokeWidth={2.5} />
             </button>
           </div>
 
@@ -136,7 +137,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                 <div className="bg-surface-secondary rounded-2xl p-5 border border-border-light">
                    <div className="flex items-center gap-4">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${status?.unlocked ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>
-                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                       <Shield size={20} />
                     </div>
                     <div className="flex-1">
                       <p className="text-[13px] font-bold text-text"> {status?.unlocked ? "Vault is Unlocked" : "Vault is Locked"}</p>
@@ -188,7 +189,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
             {(activeTab === "security" || activeTab === "integrations" || activeTab === "account") && (
               <div className="flex flex-col items-center justify-center h-full text-center space-y-4 animate-fade-in">
                 <div className="w-16 h-16 rounded-3xl bg-surface-secondary flex items-center justify-center text-text-muted">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 2v20M2 12h20"/></svg>
+                  <Wrench size={32} strokeWidth={1.5} />
                 </div>
                 <div>
                   <h3 className="text-[15px] font-bold text-text">Coming Soon</h3>
@@ -208,11 +209,11 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 function TabItem({ active, onClick, icon, children }: { active: boolean; onClick: () => void; icon: string; children: React.ReactNode }) {
   const getIcon = () => {
     switch (icon) {
-      case "general": return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1v22M1 12h22M2.8 2.8l16.4 16.4M2.8 21.2l16.4-16.4"/></svg>;
-      case "vault": return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>;
-      case "security": return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>;
-      case "integrations": return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>;
-      case "account": return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
+      case "general": return <Settings size={16} />;
+      case "vault": return <Shield size={16} />;
+      case "security": return <Lock size={16} />;
+      case "integrations": return <Link size={16} />;
+      case "account": return <User size={16} />;
       default: return null;
     }
   };

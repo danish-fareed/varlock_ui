@@ -1,5 +1,6 @@
 import { useProjectStore } from "@/stores/projectStore";
 import { ENV_BADGE_STYLES, DEFAULT_ENV_BADGE } from "@/lib/constants";
+import { Terminal } from "lucide-react";
 
 interface EnvironmentCardProps {
   envName: string;
@@ -49,8 +50,7 @@ export function EnvironmentCard({
       {/* Top row: badge + status dot */}
       <div className="flex items-center justify-between mb-3">
         <span
-          className="text-[11px] font-medium px-2 py-[3px] rounded-md"
-          style={{ backgroundColor: badgeStyle.bg, color: badgeStyle.text }}
+          className={`text-[11px] font-medium px-2 py-[3px] rounded-md ${badgeStyle}`}
         >
           {envName}
         </span>
@@ -105,15 +105,7 @@ export function EnvironmentCard({
               : "bg-surface text-text-secondary border-border-light hover:bg-surface-secondary hover:text-text"
           }`}
         >
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-            <path
-              d="M2 2l3 3-3 3M6 8h2"
-              stroke="currentColor"
-              strokeWidth="1.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <Terminal size={10} strokeWidth={1.2} aria-hidden="true" />
           Terminal
         </button>
         <button

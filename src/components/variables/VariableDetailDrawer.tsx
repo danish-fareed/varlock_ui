@@ -10,10 +10,9 @@ import type {
 import { getEnvValue, getSourceFileName, upsertEnvValue } from "@/lib/envFile";
 import { updateSchemaEntry, serializeSchemaEntry } from "@/lib/schemaParser";
 import { isSensitiveKey } from "@/lib/utils";
+import { X } from "lucide-react";
 
 // ── Types ──
-
-type DrawerTab = "schema" | "environment" | "validation";
 
 interface VariableDetailDrawerProps {
   variable: EditableVariable;
@@ -78,7 +77,6 @@ export function VariableDetailDrawer({
   const titleId = useId();
   const descriptionId = useId();
 
-  const [activeTab, setActiveTab] = useState<DrawerTab>("environment");
   const [showSecret, setShowSecret] = useState(false);
 
   // ── Schema tab state ──
@@ -264,13 +262,6 @@ export function VariableDetailDrawer({
     });
   }, [envFiles, fileContents, variable.key, variable.resolvedSource]);
 
-  // ── Tab components ──
-
-  const tabs: { id: DrawerTab; label: string; badge?: string }[] = [
-    { id: "environment", label: "Environment" },
-    { id: "schema", label: "Schema", badge: variable.typeSource === "inferred" ? "inferred" : undefined },
-    { id: "validation", label: "Validation", badge: variable.errors.length > 0 ? String(variable.errors.length) : undefined },
-  ];
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/25 backdrop-blur-sm">
@@ -308,9 +299,7 @@ export function VariableDetailDrawer({
             onClick={requestClose}
             className="text-text-muted hover:text-text transition-colors cursor-pointer shrink-0 mt-1 w-6 h-6 flex items-center justify-center rounded-md hover:bg-surface-tertiary"
           >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-              <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
+            <X size={12} strokeWidth={1.5} />
           </button>
         </div>
 
@@ -318,8 +307,7 @@ export function VariableDetailDrawer({
         <div className="px-5 py-3 border-b border-border-light">
           <div className="flex items-center gap-2 flex-wrap">
             <span
-              className="text-[10px] font-medium px-2 py-0.5 rounded-full"
-              style={{ backgroundColor: typeBadge.bg, color: typeBadge.text }}
+              className={`text-[10px] font-medium px-2 py-0.5 rounded-md ${typeBadge}`}
             >
               {variable.type}
             </span>
@@ -374,66 +362,167 @@ export function VariableDetailDrawer({
           )}
         </div>
 
-        {/* ── Tab bar (macOS segmented control) ── */}
-        <div className="px-5 py-2.5 border-b border-border-light" role="tablist">
-          <div className="flex bg-surface-tertiary rounded-lg p-0.5">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                role="tab"
-                aria-selected={activeTab === tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 px-3 py-1.5 text-xs font-medium transition-all cursor-pointer rounded-md ${
-                  activeTab === tab.id
-                    ? "bg-surface text-text shadow-sm"
-                    : "text-text-muted hover:text-text-secondary"
-                }`}
-              >
-                {tab.label}
-                {tab.badge && (
-                  <span className="ml-1.5 text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-danger-light text-danger-dark">
-                    {tab.badge}
-                  </span>
+        {/* ── Scrollable Body ── */}
+        <div className="flex-1 overflow-auto px-6 py-6 space-y-8">
+          
+          {/* Validation Errors */}
+          {variable.errors.length > 0 && (
+            <div className="space-y-2">
+              {variable.errors.map((error, idx) => (
+                <div
+                  key={idx}
+                  className="rounded-xl border border-danger/20 bg-danger-light px-3 py-2.5 text-sm text-danger-dark leading-5"
+                >
+                  <span className="font-semibold mr-1">Error:</span>{error}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Section 1: Quick Edit */}
+          <section>
+            <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-3">
+              Value ({formatFileLabel(selectedFile)})
+            </h3>
+            <input
+              value={draftValue}
+              onChange={(e) => setDraftValue(e.target.value)}
+              spellCheck={false}
+              className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-[14px] text-text font-mono outline-none focus:border-accent transition-colors shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
+              placeholder="Enter value..."
+            />
+            {envFiles.length > 1 && (
+              <div className="mt-2 text-right">
+                <span className="text-[11px] text-text-muted mr-2">Target file:</span>
+                <select
+                  value={selectedFile}
+                  onChange={(e) => setSelectedFile(e.target.value)}
+                  className="text-xs text-text bg-surface border border-border-light rounded-md px-2 py-1 outline-none focus:border-accent cursor-pointer hover:bg-surface-secondary transition-colors"
+                >
+                  {envFiles.map((file) => (
+                    <option key={file.relativePath} value={file.relativePath}>
+                      {formatFileLabel(file.relativePath)}
+                      {file.exists ? "" : " (new)"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </section>
+
+          {/* Section 2: Rules (Schema) */}
+          <section>
+            <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-3 flex items-center gap-2">
+              Rules & Metadata
+              {variable.schema === null ? (
+                <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-warning-light text-warning-dark normal-case tracking-normal">Inferred</span>
+              ) : (
+                <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-success-light text-success-dark normal-case tracking-normal">Confirmed</span>
+              )}
+            </h3>
+            
+            <div className="space-y-4">
+              <label className="block">
+                <span className="text-[11px] text-text-secondary mb-1.5 block">Description</span>
+                <textarea
+                  value={draftDescription}
+                  onChange={(e) => setDraftDescription(e.target.value)}
+                  rows={2}
+                  className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-[13px] text-text outline-none focus:border-accent resize-none transition-colors"
+                  placeholder="Brief description of this variable's purpose"
+                />
+              </label>
+
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block">
+                  <span className="text-[11px] text-text-secondary mb-1.5 block">Type</span>
+                  <select
+                    value={draftType}
+                    onChange={(e) => setDraftType(e.target.value as SchemaVarType)}
+                    className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-[13px] text-text outline-none focus:border-accent transition-colors"
+                  >
+                    {SCHEMA_TYPES.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </label>
+
+                {draftType === "enum" ? (
+                  <label className="block">
+                    <span className="text-[11px] text-text-secondary mb-1.5 block">Allowed values</span>
+                    <input
+                      value={draftEnumValues}
+                      onChange={(e) => setDraftEnumValues(e.target.value)}
+                      className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-[13px] text-text font-mono outline-none focus:border-accent transition-colors"
+                      placeholder="comma, separated"
+                    />
+                  </label>
+                ) : (
+                  <div /> // Spacer
                 )}
-              </button>
-            ))}
-          </div>
-        </div>
+              </div>
 
-        {/* ── Tab content ── */}
-        <div className="flex-1 overflow-auto px-5 py-5">
-          {activeTab === "schema" && (
-            <SchemaTab
-              variable={variable}
-              draftType={draftType}
-              draftRequired={draftRequired}
-              draftSensitive={draftSensitive}
-              draftDescription={draftDescription}
-              draftEnumValues={draftEnumValues}
-              onTypeChange={setDraftType}
-              onRequiredChange={setDraftRequired}
-              onSensitiveChange={setDraftSensitive}
-              onDescriptionChange={setDraftDescription}
-              onEnumValuesChange={setDraftEnumValues}
-            />
-          )}
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <ToggleField
+                  label="Required"
+                  description="Must have a non-empty value"
+                  checked={draftRequired}
+                  onChange={setDraftRequired}
+                />
+                <ToggleField
+                  label="Sensitive"
+                  description="Masked in UI & logs"
+                  checked={draftSensitive}
+                  onChange={setDraftSensitive}
+                />
+              </div>
+            </div>
+          </section>
 
-          {activeTab === "environment" && (
-            <EnvironmentTab
-              variable={variable}
-              envFiles={envFiles}
-              fileContents={fileContents}
-              fileValueRows={fileValueRows}
-              selectedFile={selectedFile}
-              draftValue={draftValue}
-              onSelectFile={setSelectedFile}
-              onDraftValueChange={setDraftValue}
-            />
-          )}
-
-          {activeTab === "validation" && (
-            <ValidationTab variable={variable} />
-          )}
+          {/* Section 3: File Context (Advanced) */}
+          <section>
+            <details className="group">
+              <summary className="text-xs font-medium text-text-secondary uppercase tracking-wider cursor-pointer list-none flex items-center gap-2 hover:text-text transition-colors select-none">
+                <svg className="w-3 h-3 transition-transform group-open:rotate-90 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                Values Across Files (Advanced)
+              </summary>
+              <div className="mt-4 rounded-xl border border-border-light overflow-hidden bg-surface shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+                {fileValueRows.length === 0 ? (
+                  <div className="px-3 py-4 text-sm text-text-muted text-center">
+                    No environment files found.
+                  </div>
+                ) : (
+                  fileValueRows.map((row, idx) => {
+                    const style = FILE_STATUS_STYLES[row.status] ?? FILE_STATUS_STYLES.missing!;
+                    return (
+                      <div
+                        key={row.relativePath}
+                        className={`w-full text-left px-4 py-3 flex items-center justify-between gap-3 ${
+                          idx > 0 ? "border-t border-border-light" : ""
+                        } ${
+                          selectedFile === row.relativePath
+                            ? "bg-accent-light/10"
+                            : ""
+                        }`}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-mono text-text truncate font-medium">
+                            {formatFileLabel(row.relativePath)}
+                          </div>
+                          <div className="text-[11px] font-mono text-text-muted truncate mt-1">
+                            {row.value !== null ? row.value || <span className="italic">empty string</span> : "—"}
+                          </div>
+                        </div>
+                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ${style.className}`}>
+                          {style.label}
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </details>
+          </section>
 
           {saveError && (
             <div className="mt-4 rounded-xl border border-danger/20 bg-danger-light px-3 py-3 text-sm text-danger-dark">
@@ -481,161 +570,6 @@ export function VariableDetailDrawer({
   );
 }
 
-// ── Schema Tab ──
-
-interface SchemaTabProps {
-  variable: EditableVariable;
-  draftType: SchemaVarType;
-  draftRequired: boolean;
-  draftSensitive: boolean;
-  draftDescription: string;
-  draftEnumValues: string;
-  onTypeChange: (type: SchemaVarType) => void;
-  onRequiredChange: (required: boolean) => void;
-  onSensitiveChange: (sensitive: boolean) => void;
-  onDescriptionChange: (description: string) => void;
-  onEnumValuesChange: (values: string) => void;
-}
-
-function SchemaTab({
-  variable,
-  draftType,
-  draftRequired,
-  draftSensitive,
-  draftDescription,
-  draftEnumValues,
-  onTypeChange,
-  onRequiredChange,
-  onSensitiveChange,
-  onDescriptionChange,
-  onEnumValuesChange,
-}: SchemaTabProps) {
-  const hasSchema = variable.schema !== null;
-
-  return (
-    <div className="space-y-5">
-      {/* Source indicator */}
-      <div className="rounded-xl border border-border-light bg-surface-secondary px-3 py-3">
-        <div className="flex items-center gap-2">
-          <span
-            className={`inline-block w-2 h-2 rounded-full ${
-              hasSchema ? "bg-success" : "bg-warning"
-            }`}
-          />
-          <span className="text-xs text-text-secondary">
-            {hasSchema
-              ? "Metadata is confirmed from .env.schema"
-              : "Metadata is inferred — save to confirm in .env.schema"}
-          </span>
-        </div>
-      </div>
-
-      {/* Description */}
-      <label className="block">
-        <span className="text-xs text-text-secondary mb-2 block">Description</span>
-        <textarea
-          value={draftDescription}
-          onChange={(e) => onDescriptionChange(e.target.value)}
-          rows={2}
-          className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-accent resize-none transition-colors"
-          placeholder="Brief description of this variable's purpose"
-        />
-      </label>
-
-      {/* Type */}
-      <label className="block">
-        <span className="text-xs text-text-secondary mb-2 block">
-          Type
-          {variable.typeSource === "inferred" && (
-            <span className="ml-2 text-[10px] text-text-muted italic">(inferred)</span>
-          )}
-        </span>
-        <select
-          value={draftType}
-          onChange={(e) => onTypeChange(e.target.value as SchemaVarType)}
-          className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-accent transition-colors"
-        >
-          {SCHEMA_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      {/* Enum values (conditional) */}
-      {draftType === "enum" && (
-        <label className="block">
-          <span className="text-xs text-text-secondary mb-2 block">
-            Allowed values <span className="text-text-muted">(comma-separated)</span>
-          </span>
-          <input
-            value={draftEnumValues}
-            onChange={(e) => onEnumValuesChange(e.target.value)}
-            className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text font-mono outline-none focus:border-accent transition-colors"
-            placeholder="value1, value2, value3"
-          />
-        </label>
-      )}
-
-      {/* Toggles */}
-      <div className="grid grid-cols-2 gap-3">
-        <ToggleField
-          label="Required"
-          description="Variable must have a non-empty value"
-          checked={draftRequired}
-          onChange={onRequiredChange}
-          sourceLabel={variable.requiredSource === "inferred" ? "inferred" : undefined}
-        />
-        <ToggleField
-          label="Sensitive"
-          description="Value should be masked in UI and logs"
-          checked={draftSensitive}
-          onChange={onSensitiveChange}
-          sourceLabel={variable.sensitiveSource === "inferred" ? "inferred" : undefined}
-        />
-      </div>
-
-      {/* Base value from schema */}
-      {hasSchema && (
-        <div className="rounded-xl border border-border-light bg-surface-secondary px-3 py-3">
-          <div className="text-[11px] uppercase tracking-wider text-text-muted mb-1">
-            Schema default value
-          </div>
-          <div className="font-mono text-xs text-text break-all">
-            {variable.schema!.baseValue || <span className="text-text-muted italic">empty</span>}
-          </div>
-        </div>
-      )}
-
-      {/* Schema preview */}
-      <div className="rounded-xl border border-border-light bg-[#1C1C1E] px-4 py-3">
-        <div className="text-[11px] uppercase tracking-wider text-[#98989D] mb-2">Preview</div>
-        <pre className="text-xs font-mono text-[#E5E5EA] leading-5 whitespace-pre-wrap">
-          {serializeSchemaEntry({
-            key: variable.key,
-            baseValue: variable.schema?.baseValue ?? variable.resolvedValue ?? "",
-            type: draftType,
-            required: draftRequired,
-            sensitive: draftSensitive,
-            description: draftDescription,
-            enumValues:
-              draftType === "enum"
-                ? draftEnumValues
-                    .split(",")
-                    .map((v) => v.trim())
-                    .filter(Boolean)
-                : [],
-            decorators: [],
-            lineStart: 0,
-            lineEnd: 0,
-          })}
-        </pre>
-      </div>
-    </div>
-  );
-}
-
 // ── Toggle Field ──
 
 interface ToggleFieldProps {
@@ -643,10 +577,9 @@ interface ToggleFieldProps {
   description: string;
   checked: boolean;
   onChange: (value: boolean) => void;
-  sourceLabel?: string;
 }
 
-function ToggleField({ label, description, checked, onChange, sourceLabel }: ToggleFieldProps) {
+function ToggleField({ label, description, checked, onChange }: ToggleFieldProps) {
   return (
     <button
       type="button"
@@ -654,14 +587,14 @@ function ToggleField({ label, description, checked, onChange, sourceLabel }: Tog
       className={`rounded-xl border px-3 py-3 text-left transition-colors cursor-pointer ${
         checked
           ? "border-accent/30 bg-accent-light/50"
-          : "border-border-light bg-surface-secondary hover:border-border"
+          : "border-border-light bg-surface hover:border-border"
       }`}
     >
       <div className="flex items-center justify-between mb-1">
         <span className="text-xs font-medium text-text">{label}</span>
         <span
           className={`w-8 h-4.5 rounded-full transition-colors relative ${
-            checked ? "bg-accent" : "bg-border"
+            checked ? "bg-accent" : "bg-border-light"
           }`}
         >
           <span
@@ -671,261 +604,7 @@ function ToggleField({ label, description, checked, onChange, sourceLabel }: Tog
           />
         </span>
       </div>
-      <p className="text-[11px] text-text-muted leading-4">{description}</p>
-      {sourceLabel && (
-        <p className="text-[10px] text-text-muted italic mt-1">{sourceLabel}</p>
-      )}
+      <p className="text-[10.5px] text-text-muted leading-snug">{description}</p>
     </button>
-  );
-}
-
-// ── Environment Tab ──
-
-interface EnvironmentTabProps {
-  variable: EditableVariable;
-  envFiles: EditableProjectFile[];
-  fileContents: Record<string, string>;
-  fileValueRows: Array<FileValue & { status: string }>;
-  selectedFile: string;
-  draftValue: string;
-  onSelectFile: (file: string) => void;
-  onDraftValueChange: (value: string) => void;
-}
-
-function EnvironmentTab({
-  variable,
-  envFiles,
-  fileContents,
-  fileValueRows,
-  selectedFile,
-  draftValue,
-  onSelectFile,
-  onDraftValueChange,
-}: EnvironmentTabProps) {
-  return (
-    <div className="space-y-5">
-      {/* Per-file value overview */}
-      <div>
-        <div className="text-[11px] uppercase tracking-wider text-text-muted mb-2">
-          Value across files
-        </div>
-        <div className="rounded-xl border border-border-light overflow-hidden">
-          {fileValueRows.length === 0 ? (
-            <div className="px-3 py-4 text-sm text-text-muted text-center">
-              No environment files found.
-            </div>
-          ) : (
-            fileValueRows.map((row, idx) => {
-              const style = FILE_STATUS_STYLES[row.status] ?? FILE_STATUS_STYLES.missing!;
-              return (
-                <button
-                  type="button"
-                  key={row.relativePath}
-                  onClick={() => onSelectFile(row.relativePath)}
-                  className={`w-full text-left px-3 py-2.5 flex items-center justify-between gap-2 transition-colors cursor-pointer ${
-                    idx > 0 ? "border-t border-border-light" : ""
-                  } ${
-                    selectedFile === row.relativePath
-                      ? "bg-accent-light/50"
-                      : "hover:bg-surface-secondary"
-                  }`}
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs font-mono text-text truncate">
-                      {formatFileLabel(row.relativePath)}
-                    </div>
-                    <div className="text-[11px] font-mono text-text-muted truncate mt-0.5">
-                      {row.value !== null ? row.value || <span className="italic">empty string</span> : "—"}
-                    </div>
-                  </div>
-                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ${style.className}`}>
-                    {style.label}
-                  </span>
-                </button>
-              );
-            })
-          )}
-        </div>
-      </div>
-
-      {/* Edit selected file */}
-      <div className="rounded-2xl border border-border-light bg-surface-secondary p-4 space-y-4">
-        <div>
-          <div className="text-[11px] uppercase tracking-wider text-text-muted mb-1">
-            Edit value
-          </div>
-          <p className="text-sm text-text-secondary leading-6">
-            Modify the stored value in the selected file. Other file content is preserved.
-          </p>
-        </div>
-
-        <label className="block">
-          <span className="text-xs text-text-secondary mb-2 block">Target file</span>
-          {envFiles.length > 0 ? (
-            <select
-              value={selectedFile}
-              onChange={(e) => onSelectFile(e.target.value)}
-              className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-accent transition-colors"
-            >
-              {envFiles.map((file) => (
-                <option key={file.relativePath} value={file.relativePath}>
-                  {formatFileLabel(file.relativePath)}
-                  {file.exists ? "" : " (new file)"}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <div className="rounded-xl border border-danger/20 bg-danger-light px-3 py-3 text-sm text-danger-dark">
-              No editable .env files are available for this project yet.
-            </div>
-          )}
-        </label>
-
-        <label className="block">
-          <span className="text-xs text-text-secondary mb-2 block">Stored file value</span>
-          <input
-            value={draftValue}
-            onChange={(e) => onDraftValueChange(e.target.value)}
-            spellCheck={false}
-            className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text font-mono outline-none focus:border-accent transition-colors"
-            placeholder="Enter the value to store in this file"
-          />
-        </label>
-
-        <div className="grid grid-cols-2 gap-3 text-xs text-text-secondary">
-          <div className="rounded-xl border border-border-light bg-surface px-3 py-3">
-            <div className="uppercase tracking-wider text-text-muted mb-1">Current in file</div>
-            <div className="font-mono break-all">
-              {getEnvValue(fileContents[selectedFile] ?? "", variable.key) ?? "Not present"}
-            </div>
-          </div>
-          <div className="rounded-xl border border-border-light bg-surface px-3 py-3">
-            <div className="uppercase tracking-wider text-text-muted mb-1">Save target</div>
-            <div className="font-mono break-all">{selectedFile}</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Validation Tab ──
-
-function ValidationTab({ variable }: { variable: EditableVariable }) {
-  const hasIssues = variable.errors.length > 0 || variable.warnings.length > 0;
-
-  return (
-    <div className="space-y-5">
-      {/* Status */}
-      <div
-        className={`rounded-xl border px-3 py-3 flex items-center gap-2 ${
-          variable.valid
-            ? "border-success/20 bg-success-light"
-            : "border-danger/20 bg-danger-light"
-        }`}
-      >
-        <span
-          className={`inline-block w-2.5 h-2.5 rounded-full ${
-            variable.valid ? "bg-success" : "bg-danger"
-          }`}
-        />
-        <span className={`text-sm font-medium ${variable.valid ? "text-success-dark" : "text-danger-dark"}`}>
-          {variable.valid ? "Validation passed" : "Validation failed"}
-        </span>
-      </div>
-
-      {/* Errors */}
-      {variable.errors.length > 0 && (
-        <div>
-          <div className="text-[11px] uppercase tracking-wider text-text-muted mb-2">
-            Errors ({variable.errors.length})
-          </div>
-          <div className="space-y-2">
-            {variable.errors.map((error, idx) => (
-              <div
-                key={idx}
-                className="rounded-xl border border-danger/20 bg-danger-light px-3 py-2.5 text-sm text-danger-dark leading-5"
-              >
-                {error}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Warnings */}
-      {variable.warnings.length > 0 && (
-        <div>
-          <div className="text-[11px] uppercase tracking-wider text-text-muted mb-2">
-            Warnings ({variable.warnings.length})
-          </div>
-          <div className="space-y-2">
-            {variable.warnings.map((warning, idx) => (
-              <div
-                key={idx}
-                className="rounded-xl border border-warning/20 bg-warning-light px-3 py-2.5 text-sm text-warning-dark leading-5"
-              >
-                {warning}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* No issues */}
-      {!hasIssues && (
-        <div className="text-center py-6">
-          <p className="text-sm text-text-muted">No errors or warnings for this variable.</p>
-        </div>
-      )}
-
-      {/* Metadata source breakdown */}
-      <div>
-        <div className="text-[11px] uppercase tracking-wider text-text-muted mb-2">
-          Metadata sources
-        </div>
-        <div className="rounded-xl border border-border-light overflow-hidden">
-          <MetadataSourceRow label="Type" value={variable.type} source={variable.typeSource} />
-          <MetadataSourceRow
-            label="Required"
-            value={variable.required ? "yes" : "no"}
-            source={variable.requiredSource}
-          />
-          <MetadataSourceRow
-            label="Sensitive"
-            value={variable.sensitive ? "yes" : "no"}
-            source={variable.sensitiveSource}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MetadataSourceRow({
-  label,
-  value,
-  source,
-}: {
-  label: string;
-  value: string;
-  source: "schema" | "inferred";
-}) {
-  return (
-    <div className="flex items-center justify-between px-3 py-2 border-b border-border-light last:border-b-0 bg-surface">
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-text-secondary">{label}</span>
-        <span className="text-xs font-mono text-text">{value}</span>
-      </div>
-      <span
-        className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-          source === "schema"
-            ? "bg-success-light text-success-dark"
-            : "bg-surface-tertiary text-text-muted"
-        }`}
-      >
-        {source}
-      </span>
-    </div>
   );
 }

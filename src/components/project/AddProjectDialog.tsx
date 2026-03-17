@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useProjectStore } from "@/stores/projectStore";
 import * as commands from "@/lib/commands";
+import { X, Folder } from "lucide-react";
 
 interface AddProjectDialogProps {
   onClose: () => void;
@@ -119,14 +120,7 @@ export function AddProjectDialog({ onClose }: AddProjectDialogProps) {
             aria-label="Close dialog"
             className="w-6 h-6 rounded-md flex items-center justify-center text-text-muted hover:text-text hover:bg-surface-tertiary transition-colors cursor-pointer border-none bg-transparent"
           >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-              <path
-                d="M2 2l8 8M10 2l-8 8"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
+            <X size={12} strokeWidth={1.5} aria-hidden="true" />
           </button>
         </div>
 
@@ -153,21 +147,12 @@ export function AddProjectDialog({ onClose }: AddProjectDialogProps) {
             ) : (
               <div>
                 <div className="w-10 h-10 rounded-xl bg-accent-light flex items-center justify-center mx-auto mb-2">
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 18 18"
-                    fill="none"
+                  <Folder
+                    size={18}
+                    strokeWidth={1.2}
                     className="text-accent"
                     aria-hidden="true"
-                  >
-                    <path
-                      d="M2.5 5v8.5a1.5 1.5 0 001.5 1.5h10a1.5 1.5 0 001.5-1.5V7.5a1.5 1.5 0 00-1.5-1.5H9L7.25 4H4a1.5 1.5 0 00-1.5 1z"
-                      stroke="currentColor"
-                      strokeWidth="1.2"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+                  />
                 </div>
                 <p className="text-[13px] font-medium text-text mb-0.5">
                   {picking ? "Opening folder picker..." : "Choose directory"}
