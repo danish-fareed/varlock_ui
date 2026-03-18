@@ -11,6 +11,8 @@ import * as commands from "@/lib/commands";
 interface CommandState {
   /** Scan result for the active project */
   scan: ProjectScan | null;
+  /** Scan error for active project */
+  scanError: string | null;
   /** Loading state */
   isScanning: boolean;
   /** Commands launched in OS terminal (keyed by command.id) */
@@ -34,19 +36,20 @@ interface CommandState {
 
 export const useCommandStore = create<CommandState>((set) => ({
   scan: null,
+  scanError: null,
   isScanning: false,
   running: {},
   commandErrors: {},
   logBuffers: {},
 
   scanProject: async (cwd: string) => {
-    set({ isScanning: true });
+    set({ isScanning: true, scanError: null });
     try {
       const scan = await commands.scanProject(cwd);
-      set({ scan, isScanning: false });
+      set({ scan, isScanning: false, scanError: null });
     } catch (e) {
       console.error("Failed to scan project:", e);
-      set({ isScanning: false });
+      set({ isScanning: false, scanError: String(e) });
     }
   },
 
@@ -114,6 +117,7 @@ export const useCommandStore = create<CommandState>((set) => ({
   reset: () => {
     set({
       scan: null,
+      scanError: null,
       isScanning: false,
       running: {},
       commandErrors: {},

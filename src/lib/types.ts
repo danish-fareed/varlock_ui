@@ -219,6 +219,7 @@ export interface EditableVariable {
   valid: boolean;
   errors: string[];
   warnings: string[];
+  isVaultRef?: boolean;
 }
 
 // ── Merged load result (from Rust schema parser + CLI output) ──
@@ -322,3 +323,82 @@ export interface MigrationApplyResult {
   success: boolean;
   message: string;
 }
+
+export interface MigrationSourceFilePreview {
+  relativePath: string;
+  envName: string;
+  deletable: boolean;
+  fileContent: string;
+  variableCount: number;
+}
+
+export interface SecretPreview {
+  key: string;
+  envName: string;
+  sourceFile: string;
+  reason: string;
+}
+
+export interface EnvOverridePreview {
+  envName: string;
+  relativePath: string;
+  value: string;
+}
+
+export interface MigrationVariablePreview {
+  key: string;
+  detectedType: SchemaVarType;
+  sensitive: boolean;
+  sensitiveReason: string;
+  classificationConfidence: "high" | "medium" | "low";
+  byEnv: Record<string, string>;
+  schemaValuePreview: string;
+  nonSensitiveOverrides: EnvOverridePreview[];
+}
+
+export interface EnvSummary {
+  envName: string;
+  variableCount: number;
+  sensitiveCount: number;
+}
+
+export interface MigrationPreview {
+  cwd: string;
+  alreadyMigrated: boolean;
+  blockedReason: string | null;
+  sourceFiles: MigrationSourceFilePreview[];
+  variables: MigrationVariablePreview[];
+  secretsToVault: SecretPreview[];
+  generatedSchema: string;
+  generatedExample: string;
+  envSummaries: EnvSummary[];
+  warnings: string[];
+}
+
+export interface VaultedSecretResult {
+  key: string;
+  envName: string;
+}
+
+export interface MigrationResult {
+  cwd: string;
+  schemaPath: string;
+  examplePath: string;
+  backupPath: string;
+  migratedVariables: string[];
+  vaultedSecrets: VaultedSecretResult[];
+  deletedFiles: string[];
+  keptLocalFiles: string[];
+  warnings: string[];
+  errors: string[];
+  success: boolean;
+}
+
+export type LaunchError =
+  | { type: "vaultLocked" }
+  | { type: "envValidationFailed"; issues: string[] }
+  | { type: "commandNotFound"; command: string }
+  | { type: "vaultSecretMissing"; key: string; env: string }
+  | { type: "vaultResolutionFailed"; key: string; reason: string }
+  | { type: "spawnFailed"; reason: string }
+  | { type: "invalidInput"; reason: string };

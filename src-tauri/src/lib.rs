@@ -1,3 +1,4 @@
+mod cli_entry;
 mod commands;
 mod state;
 mod varlock;
@@ -13,6 +14,10 @@ use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    if let Some(code) = cli_entry::maybe_handle_cli() {
+        std::process::exit(code);
+    }
+
     // Open (or create) the vault database
     let vault_db = VaultDb::open().expect("Failed to open vault database");
     let vault_state = VaultState::new(vault_db);
@@ -35,6 +40,8 @@ pub fn run() {
             commands::varlock::varlock_scan,
             commands::varlock::migration_plan,
             commands::varlock::migration_apply,
+            commands::varlock::get_migration_preview,
+            commands::varlock::migrate_project_to_varlock,
             commands::process::varlock_run,
             commands::process::process_kill,
             commands::process::direct_run,
@@ -115,4 +122,3 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running Varlock UI");
 }
-

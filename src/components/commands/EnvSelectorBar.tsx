@@ -19,6 +19,7 @@ export function EnvSelectorBar() {
   const runningCount = Object.values(running).filter(
     (r) => r.status === "running",
   ).length;
+  const vaultRefCount = loadResult?.variables?.filter((v) => v.isVaultRef).length ?? 0;
 
   // Env dot color
   const dotColor =
@@ -94,6 +95,10 @@ export function EnvSelectorBar() {
       {loadResult && (
         <span className="text-[11px] text-text-secondary ml-1">
           {loadResult.variables?.length ?? 0} vars
+          {vaultRefCount > 0 && (
+            <span> · {vaultRefCount} vault secret{vaultRefCount !== 1 ? "s" : ""}</span>
+          )}
+          <span> · {currentEnv}</span>
           {loadResult.warningCount > 0 && (
             <span className="text-warning"> · {loadResult.warningCount} warning{loadResult.warningCount !== 1 ? "s" : ""}</span>
           )}

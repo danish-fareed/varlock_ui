@@ -1,9 +1,10 @@
 import { invoke, Channel } from "@tauri-apps/api/core";
 import type {
   EditableProjectFile,
+  LaunchError,
   MergedLoadResult,
-  MigrationApplyResult,
-  MigrationPlan,
+  MigrationPreview,
+  MigrationResult,
   VarlockLoadResult,
   VarlockScanResult,
   VarlockStatus,
@@ -46,21 +47,21 @@ export async function varlockScan(cwd: string): Promise<VarlockScanResult> {
 
 // ── Migration ──
 
-export async function migrationPlan(cwd: string): Promise<MigrationPlan> {
-  return invoke<MigrationPlan>("migration_plan", { cwd });
+export async function getMigrationPreview(cwd: string): Promise<MigrationPreview> {
+  return invoke<MigrationPreview>("get_migration_preview", { cwd });
 }
 
-export async function migrationApply(
-  cwd: string,
-  schemaContent: string,
-  createBackups: boolean,
-): Promise<MigrationApplyResult> {
-  return invoke<MigrationApplyResult>("migration_apply", {
-    cwd,
-    schemaContent,
-    createBackups,
-  });
+export async function migrateProjectToVarlock(cwd: string): Promise<MigrationResult> {
+  return invoke<MigrationResult>("migrate_project_to_varlock", { cwd });
 }
+
+/** Backward-compatible aliases. */
+export const migrationPlan = getMigrationPreview;
+export const migrationApply = async (
+  cwd: string,
+  _schemaContent: string,
+  _createBackups: boolean,
+) => migrateProjectToVarlock(cwd);
 
 // ── Process management ──
 
@@ -72,12 +73,16 @@ export async function varlockRun(
 ): Promise<string> {
   const channel = new Channel<ProcessEvent>();
   channel.onmessage = onEvent;
-  return invoke<string>("varlock_run", {
-    cwd,
-    env,
-    command,
-    onEvent: channel,
-  });
+  try {
+    return await invoke<string>("varlock_run", {
+      cwd,
+      env,
+      command,
+      onEvent: channel,
+    });
+  } catch (err) {
+    throw err as LaunchError;
+  }
 }
 
 export async function processKill(processId: string): Promise<void> {

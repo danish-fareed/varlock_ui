@@ -1,6 +1,7 @@
 import { create } from "zustand";
-import type { TerminalSession, ProcessEvent } from "@/lib/types";
+import type { TerminalSession, ProcessEvent, LaunchError } from "@/lib/types";
 import * as commands from "@/lib/commands";
+import { useVaultStore } from "@/stores/vaultStore";
 
 // ── Dangerous environments that trigger a warning ──
 
@@ -136,9 +137,25 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
 
       return session.id;
     } catch (e) {
+      const typed = e as LaunchError;
+      if (typed?.type === "vaultLocked") {
+        try {
+          await useVaultStore.getState().checkStatus();
+        } catch {
+          // ignore status refresh errors
+        }
+      }
+
+      let launchMessage = String(e);
+      if (typed?.type === "vaultLocked") {
+        launchMessage = "Devpad vault is locked. Unlock the vault before launching this command.";
+      } else if (typed?.type === "envValidationFailed") {
+        launchMessage = typed.issues.join("\n");
+      }
+
       onOutput(
         session.id,
-        `\r\n\x1b[31mFailed to launch: ${String(e)}\x1b[0m\r\n`,
+        `\r\n\x1b[31mFailed to launch: ${launchMessage}\x1b[0m\r\n`,
       );
       get().updateSessionStatus(session.id, "error");
       return session.id;

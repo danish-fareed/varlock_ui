@@ -1,10 +1,12 @@
 use std::path::Path;
 
+use crate::state::vault_state::VaultState;
 use crate::varlock::cli;
 use crate::varlock::merge::merge_load_with_schema;
 use crate::varlock::migration;
 use crate::varlock::schema_types::MergedLoadResult;
 use crate::varlock::types::{VarlockLoadResult, VarlockScanResult, VarlockStatus};
+use tauri::State;
 
 /// Check if varlock CLI is installed and return its version.
 #[tauri::command]
@@ -77,26 +79,40 @@ pub async fn varlock_scan(cwd: String) -> Result<VarlockScanResult, String> {
 /// Generate a migration plan for a project without writing any files.
 /// Detects env files, classifies them, infers types and sensitivity,
 /// and returns a preview including the generated .env.schema content.
+#[deprecated(note = "Use get_migration_preview")]
 #[tauri::command]
 pub async fn migration_plan(
     cwd: String,
-) -> Result<migration::MigrationPlan, String> {
-    migration::generate_migration_plan(&cwd)
+) -> Result<migration::MigrationPreview, String> {
+    migration::get_migration_preview(&cwd).map_err(|e| e.to_string())
 }
 
 /// Apply a migration: write the .env.schema file with optional backup,
 /// then run `varlock init` to finalize.
+#[deprecated(note = "Use migrate_project_to_varlock")]
 #[tauri::command]
 pub async fn migration_apply(
     cwd: String,
-    schema_content: String,
-    create_backups: bool,
-) -> Result<migration::MigrationApplyResult, String> {
-    // Step 1: Write .env.schema (and create backups)
-    let result = migration::apply_migration(&cwd, &schema_content, create_backups)?;
+    _schema_content: String,
+    _create_backups: bool,
+    vault: State<'_, VaultState>,
+) -> Result<migration::MigrationResult, String> {
+    migrate_project_to_varlock(cwd, vault).await
+}
 
-    // Step 2: Run varlock init to finalize the project
-    // This is non-fatal — the schema is already written
+#[tauri::command]
+pub async fn get_migration_preview(cwd: String) -> Result<migration::MigrationPreview, String> {
+    migration::get_migration_preview(&cwd).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn migrate_project_to_varlock(
+    cwd: String,
+    vault: State<'_, VaultState>,
+) -> Result<migration::MigrationResult, String> {
+    let result = migration::migrate_project_to_varlock(&cwd, &vault).map_err(|e| e.to_string())?;
+
+    // Best-effort post-migration varlock init. Migration already wrote artifacts.
     if let Err(e) = cli::init(&cwd).await {
         log::warn!("varlock init after migration failed (non-fatal): {}", e);
     }

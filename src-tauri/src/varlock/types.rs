@@ -223,4 +223,22 @@ mod tests {
         let result: VarlockLoadFullResult = serde_json::from_str(json).unwrap();
         assert_eq!(result.config["RATE_LIMIT"].value, Some("1.5".to_string()));
     }
+
+    #[test]
+    fn test_scan_result_json() {
+        let json = r#"{
+            "clean": false,
+            "leakCount": 2,
+            "leaks": [
+                { "file": ".env", "line": 3, "key": "DB_PASSWORD", "severity": "high" },
+                { "file": "config.yml", "line": 10, "key": "API_KEY", "severity": "medium" }
+            ]
+        }"#;
+        let result: VarlockScanResult = serde_json::from_str(json).unwrap();
+        assert!(!result.clean);
+        assert_eq!(result.leak_count, 2);
+        assert_eq!(result.leaks.len(), 2);
+        assert_eq!(result.leaks[0].key, "DB_PASSWORD");
+        assert_eq!(result.leaks[1].severity, "medium");
+    }
 }

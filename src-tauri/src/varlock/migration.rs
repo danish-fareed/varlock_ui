@@ -1,557 +1,971 @@
-use serde::Serialize;
-use std::collections::HashMap;
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
-use super::schema::SENSITIVE_KEYWORDS_PUB;
+use crate::state::vault_state::VaultState;
 
-// ── Types ──
+const VAULT_EXEC_BIN: &str = "devpad";
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DetectedEnvFile {
+pub struct MigrationSourceFilePreview {
     pub relative_path: String,
-    pub role: String,
+    pub env_name: String,
+    pub deletable: bool,
+    pub file_content: String,
     pub variable_count: usize,
-    pub sensitive_key_count: usize,
-    pub exists: bool,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct MigrationVariable {
+pub struct SecretPreview {
     pub key: String,
-    pub value: String,
-    pub inferred_type: String,
-    pub inferred_sensitive: bool,
+    pub env_name: String,
     pub source_file: String,
-    /// Generated decorators for this variable
-    pub decorators: Vec<String>,
+    pub reason: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct MigrationPlan {
-    pub detected_files: Vec<DetectedEnvFile>,
-    pub variables: Vec<MigrationVariable>,
-    pub schema_preview: String,
-    pub conflicts: Vec<String>,
-    pub backup_paths: Vec<String>,
-    pub has_existing_schema: bool,
+pub struct EnvOverridePreview {
+    pub env_name: String,
+    pub relative_path: String,
+    pub value: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct MigrationApplyResult {
+pub struct MigrationVariablePreview {
+    pub key: String,
+    pub detected_type: String,
+    pub sensitive: bool,
+    pub sensitive_reason: String,
+    pub classification_confidence: String,
+    pub by_env: BTreeMap<String, String>,
+    pub schema_value_preview: String,
+    pub non_sensitive_overrides: Vec<EnvOverridePreview>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EnvSummary {
+    pub env_name: String,
+    pub variable_count: usize,
+    pub sensitive_count: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MigrationPreview {
+    pub cwd: String,
+    pub already_migrated: bool,
+    pub blocked_reason: Option<String>,
+    pub source_files: Vec<MigrationSourceFilePreview>,
+    pub variables: Vec<MigrationVariablePreview>,
+    pub secrets_to_vault: Vec<SecretPreview>,
+    pub generated_schema: String,
+    pub generated_example: String,
+    pub env_summaries: Vec<EnvSummary>,
+    pub warnings: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VaultedSecretResult {
+    pub key: String,
+    pub env_name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MigrationResult {
+    pub cwd: String,
     pub schema_path: String,
-    pub backups_created: Vec<String>,
-    pub files_written: Vec<String>,
+    pub example_path: String,
+    pub backup_path: String,
+    pub migrated_variables: Vec<String>,
+    pub vaulted_secrets: Vec<VaultedSecretResult>,
+    pub deleted_files: Vec<String>,
+    pub kept_local_files: Vec<String>,
+    pub warnings: Vec<String>,
+    pub errors: Vec<String>,
     pub success: bool,
-    pub message: String,
 }
 
-// ── File Role Classification ──
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
+pub enum MigrationError {
+    AlreadyMigrated {
+        schema_path: String,
+    },
+    NoEnvSourcesFound,
+    VaultLocked,
+    VaultStoreFailed {
+        key: String,
+        env: String,
+        reason: String,
+    },
+    SchemaWriteFailed {
+        path: String,
+        reason: String,
+    },
+    ExampleWriteFailed {
+        path: String,
+        reason: String,
+    },
+    DeleteFailed {
+        path: String,
+        reason: String,
+    },
+    BackupFailed {
+        reason: String,
+    },
+    AtomicityGuardFailed {
+        reason: String,
+    },
+    InvalidProjectPath {
+        path: String,
+    },
+}
 
-fn classify_file_role(name: &str) -> &'static str {
-    match name {
-        ".env.example" | ".env.sample" | ".env.template" => "schema-seed",
-        ".env" => "shared-defaults",
-        ".env.local" => "local-overrides",
-        ".env.schema" => "schema",
-        _ if name.starts_with(".env.") => "environment",
-        _ => "unknown",
+impl std::fmt::Display for MigrationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MigrationError::AlreadyMigrated { schema_path } => write!(
+                f,
+                "Project already migrated — .env.schema exists at {}",
+                schema_path
+            ),
+            MigrationError::NoEnvSourcesFound => {
+                write!(f, "No .env sources found for migration")
+            }
+            MigrationError::VaultLocked => {
+                write!(f, "Vault is locked. Unlock Devpad vault before migration.")
+            }
+            MigrationError::VaultStoreFailed { key, env, reason } => {
+                write!(
+                    f,
+                    "Failed to store secret {} for env {}: {}",
+                    key, env, reason
+                )
+            }
+            MigrationError::SchemaWriteFailed { path, reason } => {
+                write!(f, "Failed to write schema {}: {}", path, reason)
+            }
+            MigrationError::ExampleWriteFailed { path, reason } => {
+                write!(f, "Failed to write .env.example {}: {}", path, reason)
+            }
+            MigrationError::DeleteFailed { path, reason } => {
+                write!(f, "Failed to delete source file {}: {}", path, reason)
+            }
+            MigrationError::BackupFailed { reason } => {
+                write!(f, "Failed to create vault backup: {}", reason)
+            }
+            MigrationError::AtomicityGuardFailed { reason } => {
+                write!(f, "Migration atomicity guard failed: {}", reason)
+            }
+            MigrationError::InvalidProjectPath { path } => {
+                write!(f, "Invalid project path: {}", path)
+            }
+        }
     }
 }
 
-// ── Simple .env parser ──
+#[derive(Debug, Clone)]
+struct SourceFile {
+    relative_path: String,
+    absolute_path: PathBuf,
+    env_name: String,
+    deletable: bool,
+    include_for_inference: bool,
+    include_for_migration: bool,
+    content: String,
+    vars: Vec<ParsedVar>,
+}
 
-/// Parse a .env file into key-value pairs, preserving order.
-/// Handles:
-/// - `KEY=VALUE`
-/// - `export KEY=VALUE`
-/// - Quoted values (single and double)
-/// - Comments (#)
-/// - Empty lines
-fn parse_env_content(content: &str) -> Vec<(String, String)> {
-    let mut pairs = Vec::new();
+#[derive(Debug, Clone)]
+struct ParsedVar {
+    key: String,
+    value: String,
+}
 
+#[derive(Debug, Clone)]
+struct AggregatedVar {
+    key: String,
+    detected_type: String,
+    sensitive: bool,
+    sensitive_reason: String,
+    confidence: String,
+    by_env: BTreeMap<String, String>,
+    schema_value_preview: String,
+    non_sensitive_overrides: Vec<EnvOverridePreview>,
+    secret_sources: Vec<SecretPreview>,
+}
+
+fn extract_env_name(file_name: &str) -> String {
+    if file_name == ".env" {
+        return "development".to_string();
+    }
+    if let Some(rest) = file_name.strip_prefix(".env.") {
+        if !rest.is_empty() {
+            return rest.to_string();
+        }
+    }
+    "development".to_string()
+}
+
+fn should_skip_local(file_name: &str) -> bool {
+    file_name == ".env.local" || file_name.starts_with(".env.") && file_name.ends_with(".local")
+}
+
+fn is_env_source(file_name: &str) -> bool {
+    file_name == ".env"
+        || file_name == ".env.example"
+        || (file_name.starts_with(".env.") && file_name != ".env.schema")
+}
+
+fn parse_env_content(content: &str) -> Vec<ParsedVar> {
+    let mut out = Vec::new();
     for line in content.lines() {
         let trimmed = line.trim();
-
-        // Skip empty lines and comments
         if trimmed.is_empty() || trimmed.starts_with('#') {
             continue;
         }
-
-        // Strip `export ` prefix
-        let trimmed = if trimmed.starts_with("export ") {
-            trimmed.strip_prefix("export ").unwrap_or(trimmed).trim()
-        } else {
-            trimmed
+        let rest = trimmed.strip_prefix("export ").unwrap_or(trimmed);
+        let Some(eq_idx) = rest.find('=') else {
+            continue;
         };
-
-        // Split on first `=`
-        if let Some(eq_pos) = trimmed.find('=') {
-            let key = trimmed[..eq_pos].trim().to_string();
-            let raw_value = trimmed[eq_pos + 1..].trim();
-
-            // Strip surrounding quotes
-            let value = if (raw_value.starts_with('"') && raw_value.ends_with('"'))
-                || (raw_value.starts_with('\'') && raw_value.ends_with('\''))
-            {
-                raw_value[1..raw_value.len() - 1].to_string()
-            } else {
-                raw_value.to_string()
-            };
-
-            if !key.is_empty() {
-                pairs.push((key, value));
-            }
-        }
-    }
-
-    pairs
-}
-
-// ── Type Inference ──
-
-fn infer_type(key: &str, value: &str) -> &'static str {
-    let lower_key = key.to_lowercase();
-    let lower_value = value.to_lowercase();
-
-    // Port detection
-    if lower_key.contains("port") {
-        return "port";
-    }
-
-    // URL detection
-    if value.starts_with("http://")
-        || value.starts_with("https://")
-        || value.starts_with("postgres://")
-        || value.starts_with("mysql://")
-        || value.starts_with("redis://")
-        || value.starts_with("mongodb://")
-        || value.starts_with("amqp://")
-        || lower_key.ends_with("_url")
-        || lower_key.ends_with("_uri")
-        || lower_key == "url"
-        || lower_key == "uri"
-    {
-        return "url";
-    }
-
-    // Boolean detection
-    if matches!(
-        lower_value.as_str(),
-        "true" | "false" | "1" | "0" | "yes" | "no"
-    ) {
-        return "boolean";
-    }
-
-    // Number detection (pure digits, optionally with a decimal point)
-    if !value.is_empty() && value.chars().all(|c| c.is_ascii_digit() || c == '.') {
-        if value.parse::<f64>().is_ok() && !lower_key.contains("port") {
-            return "number";
-        }
-    }
-
-    // Email detection
-    if value.contains('@')
-        && value.contains('.')
-        && (lower_key.contains("email") || lower_key.contains("mail"))
-    {
-        return "email";
-    }
-
-    // Path detection
-    if lower_key.contains("path")
-        || lower_key.contains("dir")
-        || lower_key.contains("directory")
-        || lower_key.ends_with("_file")
-    {
-        return "path";
-    }
-
-    "string"
-}
-
-fn infer_sensitive(key: &str) -> bool {
-    let lower = key.to_lowercase();
-    SENSITIVE_KEYWORDS_PUB.iter().any(|kw| lower.contains(kw))
-}
-
-// ── Schema Generation ──
-
-fn generate_schema_content(variables: &[MigrationVariable]) -> String {
-    let mut lines = Vec::new();
-
-    for (i, var) in variables.iter().enumerate() {
-        if i > 0 {
-            lines.push(String::new());
-        }
-
-        // Description comment
-        lines.push(format!("# {}", var.key));
-
-        // Decorators
-        for dec in &var.decorators {
-            lines.push(format!("# {}", dec));
-        }
-
-        // Key=Value
-        lines.push(format!("{}={}", var.key, var.value));
-    }
-
-    let mut content = lines.join("\n");
-    if !content.is_empty() {
-        content.push('\n');
-    }
-    content
-}
-
-// ── Public API ──
-
-/// Scan a project directory and generate a migration plan without writing any files.
-pub fn generate_migration_plan(project_path: &str) -> Result<MigrationPlan, String> {
-    let dir = Path::new(project_path);
-    if !dir.exists() || !dir.is_dir() {
-        return Err(format!("Invalid project directory: {}", project_path));
-    }
-
-    let has_existing_schema = dir.join(".env.schema").exists();
-
-    // Step 1: Detect env files
-    let mut detected_files = Vec::new();
-    let entries = fs::read_dir(dir).map_err(|e| format!("Failed to read directory: {}", e))?;
-
-    for entry in entries.flatten() {
-        let is_file = entry.file_type().map(|t| t.is_file()).unwrap_or(false);
-        if !is_file {
+        let key = rest[..eq_idx].trim();
+        if key.is_empty() {
             continue;
         }
+        let value = rest[eq_idx + 1..]
+            .trim()
+            .trim_matches('"')
+            .trim_matches('\'');
+        out.push(ParsedVar {
+            key: key.to_string(),
+            value: value.to_string(),
+        });
+    }
+    out
+}
 
-        let name = entry.file_name().to_string_lossy().to_string();
-        if !name.starts_with(".env") {
-            continue;
+fn looks_like_url(value: &str) -> bool {
+    let v = value.to_ascii_lowercase();
+    v.starts_with("http://")
+        || v.starts_with("https://")
+        || v.starts_with("postgres://")
+        || v.starts_with("mysql://")
+        || v.starts_with("mongodb://")
+        || v.starts_with("redis://")
+        || v.starts_with("amqp://")
+}
+
+fn looks_like_bool(value: &str) -> bool {
+    matches!(value.to_ascii_lowercase().as_str(), "true" | "false")
+}
+
+fn looks_like_number(value: &str) -> bool {
+    if value.is_empty() {
+        return false;
+    }
+    value.parse::<i64>().is_ok() || value.parse::<f64>().is_ok()
+}
+
+fn looks_like_port(key: &str, value: &str) -> bool {
+    if !key.to_ascii_lowercase().contains("port") {
+        return false;
+    }
+    let Ok(n) = value.parse::<u16>() else {
+        return false;
+    };
+    n > 0
+}
+
+fn sensitive_pattern_reason(key: &str, value: &str) -> Option<String> {
+    let lk = key.to_ascii_lowercase();
+    let lv = value.to_ascii_lowercase();
+
+    let patterns = [
+        "api_key",
+        "apikey",
+        "password",
+        "token",
+        "secret",
+        "private_key",
+        "privatekey",
+        "connection_string",
+        "connectionstring",
+        "dsn",
+    ];
+
+    for p in patterns {
+        if lk.contains(p) {
+            return Some(format!("key pattern '{}' matched", p));
         }
+    }
 
-        let role = classify_file_role(&name);
+    if lv.contains("-----begin") && lv.contains("private key") {
+        return Some("private key content detected".to_string());
+    }
+    if lv.starts_with("sk_") || lv.starts_with("ghp_") || lv.starts_with("xoxb-") {
+        return Some("high-risk secret token format detected".to_string());
+    }
+    if lv.contains("://") && lv.contains('@') {
+        return Some("credential-bearing connection URI detected".to_string());
+    }
 
-        // Skip existing .env.schema from processing
-        if role == "schema" {
-            detected_files.push(DetectedEnvFile {
-                relative_path: name,
-                role: role.to_string(),
-                variable_count: 0,
-                sensitive_key_count: 0,
-                exists: true,
-            });
-            continue;
+    None
+}
+
+fn should_downgrade_sensitive(value: &str) -> bool {
+    looks_like_bool(value)
+        || value.parse::<i64>().is_ok()
+        || matches!(
+            value.to_ascii_lowercase().as_str(),
+            "development"
+                | "production"
+                | "staging"
+                | "test"
+                | "enabled"
+                | "disabled"
+                | "on"
+                | "off"
+        )
+}
+
+fn infer_type(key: &str, value: &str) -> String {
+    if looks_like_url(value) {
+        return "url".to_string();
+    }
+    if looks_like_bool(value) {
+        return "boolean".to_string();
+    }
+    if looks_like_port(key, value) {
+        return "port".to_string();
+    }
+    if looks_like_number(value) {
+        return "number".to_string();
+    }
+    "string".to_string()
+}
+
+fn classify_sensitive(key: &str, value: &str, source_file: &str) -> (bool, String, String) {
+    let reason = sensitive_pattern_reason(key, value);
+    if let Some(r) = reason {
+        if source_file == ".env.example" {
+            return (
+                false,
+                "example-file value excluded from secret migration".to_string(),
+                "low".to_string(),
+            );
         }
+        if should_downgrade_sensitive(value) {
+            return (
+                false,
+                "detected as config, not secret (heuristic downgrade)".to_string(),
+                "medium".to_string(),
+            );
+        }
+        return (true, r, "high".to_string());
+    }
+    (
+        false,
+        "no sensitive pattern match".to_string(),
+        "high".to_string(),
+    )
+}
 
-        let content = fs::read_to_string(entry.path()).unwrap_or_default();
-        let pairs = parse_env_content(&content);
-        let sensitive_count = pairs.iter().filter(|(k, _)| infer_sensitive(k)).count();
+fn quote_exec_arg(s: &str) -> String {
+    s.replace('"', "\\\"")
+}
 
-        detected_files.push(DetectedEnvFile {
-            relative_path: name,
-            role: role.to_string(),
-            variable_count: pairs.len(),
-            sensitive_key_count: sensitive_count,
-            exists: true,
+fn build_exec_value(cwd: &str, env_name: &str, key: &str) -> String {
+    format!(
+        "exec('{} vault read --project \"{}\" --env \"{}\" --key {}')",
+        VAULT_EXEC_BIN,
+        quote_exec_arg(cwd),
+        quote_exec_arg(env_name),
+        key
+    )
+}
+
+fn scan_source_files(cwd: &str) -> Result<Vec<SourceFile>, MigrationError> {
+    let root = Path::new(cwd);
+    if !root.exists() || !root.is_dir() {
+        return Err(MigrationError::InvalidProjectPath {
+            path: cwd.to_string(),
         });
     }
 
-    detected_files.sort_by(|a, b| {
-        // Sort order: schema-seed first, then shared-defaults, then local, then env files
-        let role_order = |r: &str| -> u8 {
-            match r {
-                "schema" => 0,
-                "schema-seed" => 1,
-                "shared-defaults" => 2,
-                "local-overrides" => 3,
-                "environment" => 4,
-                _ => 5,
-            }
-        };
-        role_order(&a.role)
-            .cmp(&role_order(&b.role))
-            .then_with(|| a.relative_path.cmp(&b.relative_path))
-    });
+    let mut out = Vec::new();
+    let entries = fs::read_dir(root).map_err(|e| MigrationError::InvalidProjectPath {
+        path: format!("{} ({})", cwd, e),
+    })?;
 
-    // Step 2: Collect all variables from detected files
-    // Priority: schema-seed > shared-defaults > local-overrides > environment files
-    let mut variable_map: HashMap<String, MigrationVariable> = HashMap::new();
-    let mut key_order: Vec<String> = Vec::new();
-    let mut conflicts: Vec<String> = Vec::new();
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+        let name = entry.file_name().to_string_lossy().to_string();
+        if !is_env_source(&name) || name == ".env.schema" {
+            continue;
+        }
 
-    // Process files in priority order (schema-seed first)
-    let priority_order: Vec<&str> = vec![
-        "schema-seed",
-        "shared-defaults",
-        "environment",
-        "local-overrides",
-    ];
+        let is_local = should_skip_local(&name);
+        let include_for_migration = !is_local;
+        let include_for_inference = true;
+        let deletable = include_for_migration && name != ".env.example";
 
-    for role in &priority_order {
-        let files_for_role: Vec<&DetectedEnvFile> =
-            detected_files.iter().filter(|f| f.role == *role).collect();
+        let content = fs::read_to_string(&path).unwrap_or_default();
+        let vars = parse_env_content(&content);
 
-        for file in files_for_role {
-            let file_path = dir.join(&file.relative_path);
-            let content = fs::read_to_string(&file_path).unwrap_or_default();
-            let pairs = parse_env_content(&content);
+        out.push(SourceFile {
+            relative_path: name.clone(),
+            absolute_path: path,
+            env_name: extract_env_name(&name),
+            deletable,
+            include_for_inference,
+            include_for_migration,
+            content,
+            vars,
+        });
+    }
 
-            for (key, value) in pairs {
-                if variable_map.contains_key(&key) {
-                    let existing = variable_map.get(&key).unwrap();
-                    if existing.value != value && !value.is_empty() {
-                        conflicts.push(format!(
-                            "{}: value in {} differs from {}",
-                            key, file.relative_path, existing.source_file
-                        ));
-                    }
-                    // For schema-seed, prefer keeping the existing (seed) value
-                    // For other files, don't overwrite
-                    continue;
-                }
+    out.sort_by(|a, b| a.relative_path.cmp(&b.relative_path));
+    Ok(out)
+}
 
-                let inferred_type = infer_type(&key, &value);
-                let inferred_sensitive = infer_sensitive(&key);
+fn aggregate_preview(cwd: &str, sources: &[SourceFile]) -> (Vec<AggregatedVar>, Vec<String>) {
+    let mut warnings = Vec::new();
+    let mut map: BTreeMap<String, Vec<(String, String, String)>> = BTreeMap::new();
 
-                // Build decorators
-                let mut decorators = Vec::new();
-                if inferred_type != "string" {
-                    if inferred_type == "enum" {
-                        decorators.push(format!("@type=enum({})", value));
-                    } else {
-                        decorators.push(format!("@type={}", inferred_type));
-                    }
-                }
-                if inferred_sensitive {
-                    decorators.push("@sensitive".to_string());
-                }
-                decorators.push("@required".to_string());
-
-                key_order.push(key.clone());
-                variable_map.insert(
-                    key.clone(),
-                    MigrationVariable {
-                        key,
-                        value,
-                        inferred_type: inferred_type.to_string(),
-                        inferred_sensitive,
-                        source_file: file.relative_path.clone(),
-                        decorators,
-                    },
-                );
-            }
+    for source in sources.iter().filter(|s| s.include_for_inference) {
+        for var in &source.vars {
+            map.entry(var.key.clone()).or_default().push((
+                source.env_name.clone(),
+                var.value.clone(),
+                source.relative_path.clone(),
+            ));
         }
     }
 
-    // Step 3: Build ordered variable list
-    let variables: Vec<MigrationVariable> = key_order
-        .iter()
-        .filter_map(|k| variable_map.remove(k))
-        .collect();
+    let mut aggregated = Vec::new();
 
-    // Step 4: Generate schema preview
-    let schema_preview = generate_schema_content(&variables);
+    for (key, values) in map {
+        let mut by_env: BTreeMap<String, String> = BTreeMap::new();
+        let mut first_type = "string".to_string();
+        let mut sensitive = false;
+        let mut sensitive_reason = "no sensitive pattern match".to_string();
+        let mut confidence = "high".to_string();
+        let mut secret_sources = Vec::new();
+        let mut non_sensitive_overrides = Vec::new();
 
-    // Step 5: Determine backup paths
-    let backup_paths: Vec<String> = if has_existing_schema {
-        vec![".env.schema.backup".to_string()]
-    } else {
-        Vec::new()
-    };
+        let mut env_first_values: BTreeMap<String, (String, String)> = BTreeMap::new();
+        for (env_name, value, source_file) in &values {
+            env_first_values
+                .entry(env_name.clone())
+                .or_insert_with(|| (value.clone(), source_file.clone()));
+        }
 
-    Ok(MigrationPlan {
-        detected_files,
-        variables,
-        schema_preview,
-        conflicts,
-        backup_paths,
-        has_existing_schema,
-    })
-}
-
-/// Apply a migration plan: write the .env.schema file, creating backups as needed.
-/// Then optionally run `varlock init` if needed.
-pub fn apply_migration(
-    project_path: &str,
-    schema_content: &str,
-    create_backups: bool,
-) -> Result<MigrationApplyResult, String> {
-    let dir = Path::new(project_path);
-    if !dir.exists() || !dir.is_dir() {
-        return Err(format!("Invalid project directory: {}", project_path));
-    }
-
-    let schema_path = dir.join(".env.schema");
-    let mut backups_created = Vec::new();
-    let mut files_written = Vec::new();
-
-    // Step 1: Create backup of existing schema if needed
-    if create_backups && schema_path.exists() {
-        let backup_path = dir.join(".env.schema.backup");
-        // If backup already exists, use a numbered suffix
-        let final_backup = if backup_path.exists() {
-            let mut counter = 1;
-            loop {
-                let numbered = dir.join(format!(".env.schema.backup.{}", counter));
-                if !numbered.exists() {
-                    break numbered;
-                }
-                counter += 1;
-                if counter > 100 {
-                    return Err(
-                        "Too many backup files exist. Please clean up .env.schema.backup.* files."
-                            .to_string(),
-                    );
-                }
+        for (env_name, (value, source_file)) in &env_first_values {
+            by_env.insert(env_name.clone(), value.clone());
+            let t = infer_type(&key, value);
+            if first_type == "string" {
+                first_type = t;
             }
+            let (is_sensitive, reason, conf) = classify_sensitive(&key, value, source_file);
+            if is_sensitive {
+                sensitive = true;
+                sensitive_reason = reason.clone();
+                confidence = conf;
+                secret_sources.push(SecretPreview {
+                    key: key.clone(),
+                    env_name: env_name.clone(),
+                    source_file: source_file.clone(),
+                    reason,
+                });
+            } else if reason.contains("example-file") || reason.contains("heuristic downgrade") {
+                warnings.push(format!("{} ({})", key, reason));
+            }
+        }
+
+        let base_value = env_first_values
+            .get("development")
+            .map(|(v, _)| v.clone())
+            .or_else(|| env_first_values.values().next().map(|(v, _)| v.clone()))
+            .unwrap_or_default();
+
+        let schema_value_preview = if sensitive {
+            build_exec_value(cwd, "development", &key)
         } else {
-            backup_path
+            base_value.clone()
         };
 
-        fs::copy(&schema_path, &final_backup).map_err(|e| {
-            format!(
-                "Failed to create backup at {}: {}",
-                final_backup.display(),
-                e
-            )
-        })?;
-        backups_created.push(
-            final_backup
-                .file_name()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .to_string(),
-        );
+        if !sensitive {
+            for (env_name, (value, source_file)) in &env_first_values {
+                if *value != base_value {
+                    non_sensitive_overrides.push(EnvOverridePreview {
+                        env_name: env_name.clone(),
+                        relative_path: source_file.clone(),
+                        value: value.clone(),
+                    });
+                }
+            }
+        }
+
+        aggregated.push(AggregatedVar {
+            key,
+            detected_type: first_type,
+            sensitive,
+            sensitive_reason,
+            confidence,
+            by_env,
+            schema_value_preview,
+            non_sensitive_overrides,
+            secret_sources,
+        });
     }
 
-    // Step 2: Write .env.schema
-    fs::write(&schema_path, schema_content)
-        .map_err(|e| format!("Failed to write {}: {}", schema_path.display(), e))?;
-    files_written.push(".env.schema".to_string());
+    (aggregated, warnings)
+}
 
-    Ok(MigrationApplyResult {
-        schema_path: schema_path.to_string_lossy().to_string(),
-        backups_created,
-        files_written,
-        success: true,
-        message: "Migration applied successfully.".to_string(),
+fn render_schema(cwd: &str, aggregated: &[AggregatedVar]) -> String {
+    let mut lines = Vec::new();
+    for (idx, var) in aggregated.iter().enumerate() {
+        if idx > 0 {
+            lines.push(String::new());
+        }
+        lines.push(format!("# {}", var.key));
+        lines.push(format!("# @env-spec @type={}", var.detected_type));
+        lines.push("# @required".to_string());
+        if var.sensitive {
+            lines.push("# @sensitive".to_string());
+            lines.push(format!(
+                "{}={}",
+                var.key,
+                build_exec_value(cwd, "development", &var.key)
+            ));
+        } else {
+            lines.push(format!("{}={}", var.key, var.schema_value_preview));
+        }
+    }
+    let mut out = lines.join("\n");
+    if !out.is_empty() {
+        out.push('\n');
+    }
+    out
+}
+
+fn render_example(aggregated: &[AggregatedVar]) -> String {
+    let mut lines = Vec::new();
+    for var in aggregated {
+        let value = if var.sensitive {
+            "<stored in vault>".to_string()
+        } else {
+            var.schema_value_preview.clone()
+        };
+        lines.push(format!("{}={}", var.key, value));
+    }
+    let mut out = lines.join("\n");
+    if !out.is_empty() {
+        out.push('\n');
+    }
+    out
+}
+
+fn render_non_sensitive_env_files(
+    aggregated: &[AggregatedVar],
+    env_names: &HashSet<String>,
+) -> HashMap<String, String> {
+    let mut out = HashMap::new();
+    for env_name in env_names {
+        if env_name == "development" {
+            continue;
+        }
+        let mut lines = Vec::new();
+        for var in aggregated {
+            if var.sensitive {
+                continue;
+            }
+            if let Some(value) = var.by_env.get(env_name) {
+                lines.push(format!("{}={}", var.key, value));
+            }
+        }
+        if !lines.is_empty() {
+            let mut content = lines.join("\n");
+            content.push('\n');
+            out.insert(format!(".env.{}", env_name), content);
+        }
+    }
+    out
+}
+
+fn create_vault_backup() -> Result<String, MigrationError> {
+    let data_dir = dirs::data_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("varlock-ui");
+    let backups_dir = data_dir.join("backups");
+    fs::create_dir_all(&backups_dir).map_err(|e| MigrationError::BackupFailed {
+        reason: format!("failed to create backups dir: {}", e),
+    })?;
+
+    let db_path = data_dir.join("vault.db");
+    if !db_path.exists() {
+        return Err(MigrationError::BackupFailed {
+            reason: "vault database not found".to_string(),
+        });
+    }
+
+    let stamp = chrono::Utc::now().format("%Y%m%d-%H%M%S").to_string();
+    let backup_path = backups_dir.join(format!("vault-{}.db", stamp));
+
+    fs::copy(&db_path, &backup_path).map_err(|e| MigrationError::BackupFailed {
+        reason: format!("failed to copy vault database: {}", e),
+    })?;
+
+    Ok(backup_path.to_string_lossy().to_string())
+}
+
+pub fn get_migration_preview(cwd: &str) -> Result<MigrationPreview, MigrationError> {
+    let schema_path = Path::new(cwd).join(".env.schema");
+    if schema_path.exists() {
+        return Ok(MigrationPreview {
+            cwd: cwd.to_string(),
+            already_migrated: true,
+            blocked_reason: Some(format!(
+                "Project already migrated — .env.schema exists at {}",
+                schema_path.to_string_lossy()
+            )),
+            source_files: Vec::new(),
+            variables: Vec::new(),
+            secrets_to_vault: Vec::new(),
+            generated_schema: String::new(),
+            generated_example: String::new(),
+            env_summaries: Vec::new(),
+            warnings: vec!["Migration disabled for already-migrated project".to_string()],
+        });
+    }
+
+    let source_files = scan_source_files(cwd)?;
+    let migration_sources = source_files
+        .iter()
+        .filter(|s| s.include_for_migration)
+        .count();
+    if migration_sources == 0 {
+        return Err(MigrationError::NoEnvSourcesFound);
+    }
+
+    let (aggregated, mut warnings) = aggregate_preview(cwd, &source_files);
+    let generated_schema = render_schema(cwd, &aggregated);
+    let generated_example = render_example(&aggregated);
+
+    let mut env_summary_map: BTreeMap<String, (usize, usize)> = BTreeMap::new();
+    let mut source_previews = Vec::new();
+
+    for source in &source_files {
+        let sensitive_count = source
+            .vars
+            .iter()
+            .filter(|v| classify_sensitive(&v.key, &v.value, &source.relative_path).0)
+            .count();
+        let entry = env_summary_map
+            .entry(source.env_name.clone())
+            .or_insert((0, 0));
+        entry.0 += source.vars.len();
+        entry.1 += sensitive_count;
+
+        source_previews.push(MigrationSourceFilePreview {
+            relative_path: source.relative_path.clone(),
+            env_name: source.env_name.clone(),
+            deletable: source.deletable,
+            file_content: source.content.clone(),
+            variable_count: source.vars.len(),
+        });
+    }
+
+    let env_summaries = env_summary_map
+        .into_iter()
+        .map(|(env_name, (variable_count, sensitive_count))| EnvSummary {
+            env_name,
+            variable_count,
+            sensitive_count,
+        })
+        .collect::<Vec<_>>();
+
+    let mut secrets_to_vault = Vec::new();
+    let variables = aggregated
+        .iter()
+        .map(|v| {
+            secrets_to_vault.extend(v.secret_sources.clone());
+            MigrationVariablePreview {
+                key: v.key.clone(),
+                detected_type: v.detected_type.clone(),
+                sensitive: v.sensitive,
+                sensitive_reason: v.sensitive_reason.clone(),
+                classification_confidence: v.confidence.clone(),
+                by_env: v.by_env.clone(),
+                schema_value_preview: v.schema_value_preview.clone(),
+                non_sensitive_overrides: v.non_sensitive_overrides.clone(),
+            }
+        })
+        .collect::<Vec<_>>();
+
+    if secrets_to_vault.is_empty() {
+        warnings.push("No sensitive values detected for vault migration".to_string());
+    }
+
+    Ok(MigrationPreview {
+        cwd: cwd.to_string(),
+        already_migrated: false,
+        blocked_reason: None,
+        source_files: source_previews,
+        variables,
+        secrets_to_vault,
+        generated_schema,
+        generated_example,
+        env_summaries,
+        warnings,
     })
 }
 
-// ── Tests ──
+pub fn migrate_project_to_varlock(
+    cwd: &str,
+    vault: &VaultState,
+) -> Result<MigrationResult, MigrationError> {
+    let preview = get_migration_preview(cwd)?;
+    if preview.already_migrated {
+        return Err(MigrationError::AlreadyMigrated {
+            schema_path: Path::new(cwd)
+                .join(".env.schema")
+                .to_string_lossy()
+                .to_string(),
+        });
+    }
+
+    let sources = scan_source_files(cwd)?;
+    let (aggregated, warnings) = aggregate_preview(cwd, &sources);
+
+    let backup_path = create_vault_backup()?;
+
+    let dek = vault.get_dek().ok_or(MigrationError::VaultLocked)?;
+
+    let mut vaulted = Vec::new();
+    for source in sources.iter().filter(|s| s.include_for_migration) {
+        for var in &source.vars {
+            let (is_sensitive, _, _) =
+                classify_sensitive(&var.key, &var.value, &source.relative_path);
+            if !is_sensitive {
+                continue;
+            }
+
+            vault
+                .db
+                .set_variable(
+                    &dek,
+                    cwd,
+                    &source.env_name,
+                    &var.key,
+                    &var.value,
+                    "string",
+                    true,
+                    true,
+                    "",
+                )
+                .map_err(|e| MigrationError::VaultStoreFailed {
+                    key: var.key.clone(),
+                    env: source.env_name.clone(),
+                    reason: e.to_string(),
+                })?;
+
+            vaulted.push(VaultedSecretResult {
+                key: var.key.clone(),
+                env_name: source.env_name.clone(),
+            });
+        }
+    }
+
+    let schema_path = Path::new(cwd).join(".env.schema");
+    let schema_content = render_schema(cwd, &aggregated);
+    fs::write(&schema_path, &schema_content).map_err(|e| MigrationError::SchemaWriteFailed {
+        path: schema_path.to_string_lossy().to_string(),
+        reason: e.to_string(),
+    })?;
+
+    let example_path = Path::new(cwd).join(".env.example");
+    let example_content = render_example(&aggregated);
+    fs::write(&example_path, &example_content).map_err(|e| MigrationError::ExampleWriteFailed {
+        path: example_path.to_string_lossy().to_string(),
+        reason: e.to_string(),
+    })?;
+
+    if !schema_path.exists() || !example_path.exists() {
+        return Err(MigrationError::AtomicityGuardFailed {
+            reason: "schema/example files missing after write".to_string(),
+        });
+    }
+
+    let env_names = sources
+        .iter()
+        .filter(|s| s.include_for_migration)
+        .map(|s| s.env_name.clone())
+        .collect::<HashSet<_>>();
+    let overrides = render_non_sensitive_env_files(&aggregated, &env_names);
+    let override_paths: HashSet<String> = overrides.keys().cloned().collect();
+    for (relative, content) in overrides {
+        let path = Path::new(cwd).join(relative);
+        let _ = fs::write(path, content);
+    }
+
+    let mut deleted_files = Vec::new();
+    let mut kept_local_files = Vec::new();
+    for source in &sources {
+        if should_skip_local(&source.relative_path) {
+            kept_local_files.push(source.relative_path.clone());
+            continue;
+        }
+        if !source.deletable {
+            continue;
+        }
+        if override_paths.contains(&source.relative_path) {
+            // Keep rewritten override files in place.
+            continue;
+        }
+        fs::remove_file(&source.absolute_path).map_err(|e| MigrationError::DeleteFailed {
+            path: source.absolute_path.to_string_lossy().to_string(),
+            reason: e.to_string(),
+        })?;
+        deleted_files.push(source.relative_path.clone());
+    }
+
+    Ok(MigrationResult {
+        cwd: cwd.to_string(),
+        schema_path: schema_path.to_string_lossy().to_string(),
+        example_path: example_path.to_string_lossy().to_string(),
+        backup_path,
+        migrated_variables: aggregated.iter().map(|v| v.key.clone()).collect(),
+        vaulted_secrets: vaulted,
+        deleted_files,
+        kept_local_files,
+        warnings,
+        errors: Vec::new(),
+        success: true,
+    })
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Write;
 
     #[test]
-    fn test_parse_env_content_basic() {
-        let content = "FOO=bar\nBAZ=qux\n";
-        let pairs = parse_env_content(content);
-        assert_eq!(pairs.len(), 2);
-        assert_eq!(pairs[0], ("FOO".to_string(), "bar".to_string()));
-        assert_eq!(pairs[1], ("BAZ".to_string(), "qux".to_string()));
+    fn test_idempotency_when_schema_exists() {
+        let base =
+            std::env::temp_dir().join(format!("varlock-migration-test-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&base).unwrap();
+        let schema_path = base.join(".env.schema");
+        let mut file = std::fs::File::create(&schema_path).unwrap();
+        file.write_all(b"# schema\n").unwrap();
+
+        let preview = get_migration_preview(base.to_string_lossy().as_ref()).unwrap();
+        assert!(preview.already_migrated);
+
+        let _ = std::fs::remove_dir_all(&base);
     }
 
     #[test]
-    fn test_parse_env_content_with_export_and_quotes() {
-        let content = r#"
-export APP_NAME="my app"
-DB_URL='postgres://localhost/db'
-# this is a comment
-PORT=3000
-"#;
-        let pairs = parse_env_content(content);
-        assert_eq!(pairs.len(), 3);
-        assert_eq!(pairs[0].0, "APP_NAME");
-        assert_eq!(pairs[0].1, "my app");
-        assert_eq!(pairs[1].0, "DB_URL");
-        assert_eq!(pairs[1].1, "postgres://localhost/db");
-        assert_eq!(pairs[2].0, "PORT");
-        assert_eq!(pairs[2].1, "3000");
+    fn test_extract_env_name() {
+        assert_eq!(extract_env_name(".env"), "development");
+        assert_eq!(extract_env_name(".env.production"), "production");
     }
 
     #[test]
-    fn test_classify_file_role() {
-        assert_eq!(classify_file_role(".env.example"), "schema-seed");
-        assert_eq!(classify_file_role(".env.sample"), "schema-seed");
-        assert_eq!(classify_file_role(".env"), "shared-defaults");
-        assert_eq!(classify_file_role(".env.local"), "local-overrides");
-        assert_eq!(classify_file_role(".env.schema"), "schema");
-        assert_eq!(classify_file_role(".env.production"), "environment");
-        assert_eq!(classify_file_role(".env.development"), "environment");
+    fn test_sensitive_downgrade() {
+        let (s, reason, _) = classify_sensitive("TOKEN_EXPIRY_SECONDS", "3600", ".env");
+        assert!(!s);
+        assert!(reason.contains("heuristic downgrade"));
     }
 
     #[test]
-    fn test_infer_type_url() {
-        assert_eq!(infer_type("DATABASE_URL", "postgres://localhost/db"), "url");
-        assert_eq!(infer_type("API_URL", ""), "url");
-        assert_eq!(infer_type("HOMEPAGE", "https://example.com"), "url");
-    }
-
-    #[test]
-    fn test_infer_type_port() {
+    fn test_infer_type_matrix() {
+        assert_eq!(infer_type("DATABASE_URL", "postgres://x"), "url");
         assert_eq!(infer_type("PORT", "3000"), "port");
-        assert_eq!(infer_type("REDIS_PORT", "6379"), "port");
-    }
-
-    #[test]
-    fn test_infer_type_boolean() {
         assert_eq!(infer_type("DEBUG", "true"), "boolean");
-        assert_eq!(infer_type("VERBOSE", "false"), "boolean");
-        assert_eq!(infer_type("ENABLED", "1"), "boolean");
+        assert_eq!(infer_type("RETRY_COUNT", "5"), "number");
+        assert_eq!(infer_type("NODE_ENV", "development"), "string");
     }
 
     #[test]
-    fn test_infer_type_number() {
-        assert_eq!(infer_type("MAX_RETRIES", "5"), "number");
-        assert_eq!(infer_type("TIMEOUT_MS", "30000"), "number");
-    }
-
-    #[test]
-    fn test_infer_sensitive() {
-        assert!(infer_sensitive("API_KEY"));
-        assert!(infer_sensitive("DATABASE_PASSWORD"));
-        assert!(infer_sensitive("JWT_SECRET"));
-        assert!(infer_sensitive("OAUTH_TOKEN"));
-        assert!(!infer_sensitive("APP_NAME"));
-        assert!(!infer_sensitive("PORT"));
-        assert!(!infer_sensitive("NODE_ENV"));
-    }
-
-    #[test]
-    fn test_generate_schema_content() {
-        let vars = vec![
-            MigrationVariable {
-                key: "PORT".to_string(),
-                value: "3000".to_string(),
-                inferred_type: "port".to_string(),
-                inferred_sensitive: false,
-                source_file: ".env".to_string(),
-                decorators: vec!["@type=port".to_string(), "@required".to_string()],
-            },
-            MigrationVariable {
-                key: "API_KEY".to_string(),
-                value: "sk-123".to_string(),
-                inferred_type: "string".to_string(),
-                inferred_sensitive: true,
-                source_file: ".env".to_string(),
-                decorators: vec!["@sensitive".to_string(), "@required".to_string()],
-            },
+    fn test_common_pattern_classification_matrix() {
+        let cases = vec![
+            ("API_KEY", "sk_live_123", true, "string"),
+            (
+                "DATABASE_URL",
+                "postgres://localhost:5432/app",
+                false,
+                "url",
+            ),
+            ("PORT", "3000", false, "port"),
+            ("NODE_ENV", "development", false, "string"),
+            ("JWT_SECRET", "abc123xyz", true, "string"),
+            ("REDIS_DSN", "redis://localhost:6379", true, "url"),
+            ("TOKEN_EXPIRY_SECONDS", "3600", false, "number"),
+            ("ENABLE_CACHE", "true", false, "boolean"),
+            (
+                "PRIVATE_KEY",
+                "-----BEGIN PRIVATE KEY-----abc",
+                true,
+                "string",
+            ),
+            (
+                "CONNECTION_STRING",
+                "Server=localhost;User Id=app;",
+                true,
+                "string",
+            ),
         ];
 
-        let content = generate_schema_content(&vars);
-        assert!(content.contains("# PORT"));
-        assert!(content.contains("# @type=port"));
-        assert!(content.contains("PORT=3000"));
-        assert!(content.contains("# API_KEY"));
-        assert!(content.contains("# @sensitive"));
-        assert!(content.contains("API_KEY=sk-123"));
+        for (key, value, sensitive_expected, type_expected) in cases {
+            let (sensitive, _reason, _confidence) = classify_sensitive(key, value, ".env");
+            assert_eq!(
+                sensitive, sensitive_expected,
+                "key {} sensitivity mismatch",
+                key
+            );
+            assert_eq!(
+                infer_type(key, value),
+                type_expected,
+                "key {} type mismatch",
+                key
+            );
+        }
+    }
+
+    #[test]
+    fn test_parse_env_content() {
+        let parsed = parse_env_content("A=1\nexport B=two\n#x\n");
+        assert_eq!(parsed.len(), 2);
+        assert_eq!(parsed[0].key, "A");
+        assert_eq!(parsed[1].key, "B");
+    }
+
+    #[test]
+    fn test_render_schema_uses_exec_for_sensitive() {
+        let var = AggregatedVar {
+            key: "DATABASE_URL".to_string(),
+            detected_type: "url".to_string(),
+            sensitive: true,
+            sensitive_reason: "x".to_string(),
+            confidence: "high".to_string(),
+            by_env: BTreeMap::new(),
+            schema_value_preview: String::new(),
+            non_sensitive_overrides: vec![],
+            secret_sources: vec![],
+        };
+        let schema = render_schema("/tmp/project", &[var]);
+        assert!(schema.contains("exec('devpad vault read"));
     }
 }

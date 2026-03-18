@@ -4,7 +4,7 @@ use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 
 use super::detect::find_varlock_binary;
-use super::types::{VarlockLoadFullResult, VarlockLoadResult, VarlockScanResult, VarlockStatus};
+use super::types::{VarlockLeak, VarlockLoadFullResult, VarlockLoadResult, VarlockScanResult, VarlockStatus};
 
 /// Default timeout for CLI operations (30 seconds).
 const CLI_TIMEOUT: Duration = Duration::from_secs(30);
@@ -286,6 +286,51 @@ pub async fn init(cwd: &str) -> Result<(), String> {
     }
 }
 
+/// Parse human-readable scan output (one leak per line: `FILE:LINE:COL KEY`).
+/// Returns a `VarlockScanResult`. If the input is empty or has no parseable
+/// lines, returns a "clean" result.
+fn parse_scan_text(text: &str) -> VarlockScanResult {
+    let mut leaks = Vec::new();
+
+    for line in text.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with("🔍") || trimmed.starts_with("✅") {
+            continue;
+        }
+
+        // Expected format: FILE:LINE:COL KEY
+        // e.g.  .env.schema:8:4 PGSSLMODE
+        let parts: Vec<&str> = trimmed.splitn(2, ' ').collect();
+        if parts.len() != 2 {
+            continue;
+        }
+        let location = parts[0];
+        let key = parts[1].trim().to_string();
+
+        let loc_parts: Vec<&str> = location.split(':').collect();
+        if loc_parts.len() < 2 {
+            continue;
+        }
+        let file = loc_parts[0].to_string();
+        let line_num: u32 = loc_parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
+
+        leaks.push(VarlockLeak {
+            file,
+            line: line_num,
+            key,
+            severity: "high".to_string(),
+        });
+    }
+
+    let clean = leaks.is_empty();
+    let leak_count = leaks.len() as u32;
+    VarlockScanResult {
+        clean,
+        leak_count,
+        leaks,
+    }
+}
+
 /// Run `varlock scan` and parse the output.
 pub async fn scan(cwd: &str) -> Result<VarlockScanResult, String> {
     let binary = find_varlock_binary(None)
@@ -311,15 +356,31 @@ pub async fn scan(cwd: &str) -> Result<VarlockScanResult, String> {
         format!("{}\n{}", stderr.trim(), trimmed_stdout)
     };
 
-    let json_str = extract_json(trimmed_stdout).unwrap_or(trimmed_stdout);
+    // Exit code 0 = clean, 1 = leaks found — both are valid scan outcomes.
+    let exit_code = output.status.code();
+    match exit_code {
+        Some(0) | Some(1) => {
+            // Try to find JSON anywhere in the combined output (stderr + stdout).
+            if let Some(json_str) = extract_json(&combined_output) {
+                if let Ok(result) = serde_json::from_str::<VarlockScanResult>(json_str) {
+                    return Ok(result);
+                }
+            }
 
-    serde_json::from_str::<VarlockScanResult>(json_str).map_err(|e| {
-        format!(
-            "Failed to parse varlock scan output: {}. Raw output: {}",
-            e,
-            truncate_output(&combined_output, 500)
-        )
-    })
+            // No valid JSON — fall back to parsing human-readable text output.
+            Ok(parse_scan_text(&combined_output))
+        }
+        _ => {
+            let code_str = exit_code
+                .map(|c| c.to_string())
+                .unwrap_or_else(|| "killed by signal".to_string());
+            Err(format!(
+                "varlock scan failed (exit {}): {}",
+                code_str,
+                truncate_output(&combined_output, 500)
+            ))
+        }
+    }
 }
 
 /// Build the command arguments for `varlock run`.
@@ -352,4 +413,70 @@ pub async fn build_run_command(
     let env_override = env.map(|e| ("APP_ENV".to_string(), e.to_string()));
 
     Ok((binary_str, args, env_override))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::varlock::types::VarlockScanResult;
+
+    #[test]
+    fn test_parse_scan_text_happy() {
+        let text = ".env.schema:8:4 PGSSLMODE\nCargo.lock:1:16 S3_REGION\n";
+        let result = parse_scan_text(text);
+
+        assert!(!result.clean);
+        assert_eq!(result.leak_count, 2);
+        assert_eq!(result.leaks.len(), 2);
+
+        assert_eq!(result.leaks[0].file, ".env.schema");
+        assert_eq!(result.leaks[0].line, 8);
+        assert_eq!(result.leaks[0].key, "PGSSLMODE");
+
+        assert_eq!(result.leaks[1].file, "Cargo.lock");
+        assert_eq!(result.leaks[1].line, 1);
+        assert_eq!(result.leaks[1].key, "S3_REGION");
+    }
+
+    #[test]
+    fn test_parse_scan_text_empty() {
+        let result = parse_scan_text("");
+        assert!(result.clean);
+        assert_eq!(result.leak_count, 0);
+        assert!(result.leaks.is_empty());
+    }
+
+    #[test]
+    fn test_parse_scan_text_with_emoji_lines() {
+        let text = "🔍 Scanning for leaks...\n.env:3:0 API_SECRET\n✅ Done.\n";
+        let result = parse_scan_text(text);
+
+        assert!(!result.clean);
+        assert_eq!(result.leak_count, 1);
+        assert_eq!(result.leaks[0].file, ".env");
+        assert_eq!(result.leaks[0].key, "API_SECRET");
+    }
+
+    #[test]
+    fn test_scan_json_fallback() {
+        // Simulate JSON embedded in combined output with human text around it
+        let combined = "🔍 Scanning...\n{\"clean\":false,\"leakCount\":1,\"leaks\":[{\"file\":\".env\",\"line\":5,\"key\":\"SECRET\",\"severity\":\"high\"}]}\n";
+        let json_str = extract_json(combined);
+        assert!(json_str.is_some());
+
+        let result: VarlockScanResult = serde_json::from_str(json_str.unwrap()).unwrap();
+        assert!(!result.clean);
+        assert_eq!(result.leak_count, 1);
+        assert_eq!(result.leaks[0].key, "SECRET");
+    }
+
+    #[test]
+    fn test_extract_json_empty_string() {
+        assert!(extract_json("").is_none());
+    }
+
+    #[test]
+    fn test_extract_json_no_braces() {
+        assert!(extract_json("no json here").is_none());
+    }
 }

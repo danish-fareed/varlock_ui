@@ -118,12 +118,18 @@ fn build_merged_variable(
         None => (var.required, "inferred".to_string()),
     };
 
-    // Detect vault references: if the value starts with "varlock://vault/",
-    // auto-classify as sensitive regardless of schema/CLI metadata.
+    // Detect vault references:
+    // - URI style: varlock://vault/KEY
+    // - exec helper style: exec('devpad vault read ...')
+    // Auto-classify as sensitive regardless of schema/CLI metadata.
     let is_vault_ref = var
         .value
         .as_deref()
-        .map(|v| v.starts_with("varlock://vault/"))
+        .map(|v| {
+            v.starts_with("varlock://vault/")
+                || (v.starts_with("exec('") && v.contains(" vault read ") && v.ends_with("')"))
+                || (v.starts_with("exec(\"") && v.contains(" vault read ") && v.ends_with("\")"))
+        })
         .unwrap_or(false);
 
     let (sensitive, sensitive_source) = if is_vault_ref {

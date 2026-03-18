@@ -65,5 +65,6 @@ export function buildEditableVariable(
     valid: variable.valid,
     errors: [...variable.errors],
     warnings: [...variable.warnings],
+    isVaultRef: variable.isVaultRef,
   };
 }

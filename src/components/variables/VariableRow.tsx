@@ -8,7 +8,7 @@ import { readEnvFile, writeEnvFile } from "@/lib/commands";
 import { updateSchemaEntry, serializeSchemaEntry, parseSchema } from "@/lib/schemaParser";
 import type { SchemaEntry, SchemaVarType } from "@/lib/types";
 import { isSensitiveKey } from "@/lib/utils";
-import { Shield, MoreVertical, Copy, ShieldOff, Trash, Eye, EyeOff, ShieldAlert } from "lucide-react";
+import { Shield, MoreVertical, Copy, ShieldOff, Trash, Eye, EyeOff, ShieldAlert, Lock } from "lucide-react";
 
 interface VariableRowProps {
   variable: MergedVariable;
@@ -29,6 +29,7 @@ export function VariableRow({ variable, isSelected, onSelect, onDelete, isLast }
   const menuRef = useRef<HTMLDivElement>(null);
 
   const activeProject = useProjectStore((s) => s.activeProject);
+  const activeEnv = useEnvironmentStore((s) => s.activeEnv);
   const setVariable = useVaultStore((s) => s.setVariable);
 
   const isRecommended = !variable.sensitive && isSensitiveKey(variable.key);
@@ -82,7 +83,7 @@ export function VariableRow({ variable, isSelected, onSelect, onDelete, isLast }
     try {
       await setVariable(
         activeProject.id,
-        "default",
+        activeEnv,
         variable.key,
         variable.value,
         variable.type,
@@ -190,6 +191,9 @@ export function VariableRow({ variable, isSelected, onSelect, onDelete, isLast }
         />
         {variable.sensitive && (
           <Shield size={11} strokeWidth={1.5} className="text-accent shrink-0" />
+        )}
+        {variable.isVaultRef && (
+          <Lock size={10} strokeWidth={1.6} className="text-accent shrink-0" />
         )}
         <span className="truncate">{variable.key}</span>
         {isRecommended && (

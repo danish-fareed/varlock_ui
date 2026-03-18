@@ -10,7 +10,7 @@ import type {
 import { getEnvValue, getSourceFileName, upsertEnvValue } from "@/lib/envFile";
 import { updateSchemaEntry, serializeSchemaEntry } from "@/lib/schemaParser";
 import { isSensitiveKey } from "@/lib/utils";
-import { X } from "lucide-react";
+import { Lock, X } from "lucide-react";
 
 // ── Types ──
 
@@ -322,6 +322,11 @@ export function VariableDetailDrawer({
             {variable.sensitive && (
               <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-accent-light text-accent">
                 sensitive
+              </span>
+            )}
+            {variable.isVaultRef && (
+              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-accent-light text-accent flex items-center gap-1">
+                <Lock size={10} strokeWidth={1.7} /> vault-backed
               </span>
             )}
             <span

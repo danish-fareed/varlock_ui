@@ -56,6 +56,7 @@ export function AppLayout() {
 function DashboardView() {
   const { activeProject } = useProjectStore();
   const { scanProject, reset } = useCommandStore();
+  const scanError = useCommandStore((s) => s.scanError);
   const { loadEnvironment, loadResult, isLoading } = useEnvironmentStore();
   const [showEnvView, setShowEnvView] = useState(true);
   const scan = useCommandStore((s) => s.scan);
@@ -190,7 +191,14 @@ function DashboardView() {
         {showEnvView ? (
           <VariableList />
         ) : (
-          <CommandGrid />
+          <>
+            {scanError && (
+              <div className="mb-3 rounded-lg border border-danger/20 bg-danger-light px-3 py-2 text-[12px] text-danger-dark">
+                Command discovery failed: {scanError}
+              </div>
+            )}
+            <CommandGrid />
+          </>
         )}
       </div>
     </div>
