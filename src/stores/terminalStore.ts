@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { TerminalSession, ProcessEvent, LaunchError } from "@/lib/types";
+import { formatLaunchError } from "@/lib/types";
 import * as commands from "@/lib/commands";
 import { useVaultStore } from "@/stores/vaultStore";
 
@@ -103,6 +104,19 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
         command,
         (event: ProcessEvent) => {
           switch (event.event) {
+            case "launchLog": {
+              const header = event.data.envStatus
+                ? `[python-env:${event.data.envStatus}]`
+                : "[launch]";
+              onOutput(
+                session.id,
+                `${header}${event.data.interpreterPath ? ` ${event.data.interpreterPath}` : ""}\r\n`,
+              );
+              for (const line of event.data.lines) {
+                onOutput(session.id, `${line}\r\n`);
+              }
+              break;
+            }
             case "stdout":
               onOutput(session.id, event.data.data);
               break;
@@ -146,12 +160,7 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
         }
       }
 
-      let launchMessage = String(e);
-      if (typed?.type === "vaultLocked") {
-        launchMessage = "Devpad vault is locked. Unlock the vault before launching this command.";
-      } else if (typed?.type === "envValidationFailed") {
-        launchMessage = typed.issues.join("\n");
-      }
+      const launchMessage = formatLaunchError(e);
 
       onOutput(
         session.id,

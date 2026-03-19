@@ -56,12 +56,12 @@ Devpad was designed with defense-in-depth principles. For a complete overview of
 
 2. Install dependencies:
    ```bash
-   npm install
+   bun install
    ```
 
 3. Run in development mode:
    ```bash
-   npm run tauri dev
+   bun tauri dev
    ```
 
 ### Running Tests
