@@ -138,9 +138,10 @@ export const useCommandStore = create<CommandState>((set, get) => ({
     });
 
     try {
-      const cwd = get().scan?.nodes.find((n) => n.id === command.nodeId)?.path;
+      const rootNodeId = get().scan?.rootNodeId;
+      const cwd = get().scan?.nodes.find((n) => n.id === rootNodeId)?.path;
       if (!cwd) {
-        throw new Error("Unable to resolve command working directory");
+        throw new Error("Unable to resolve command working directory (project root missing)");
       }
 
       const commandLine = [command.command, ...command.args].join(" ");
