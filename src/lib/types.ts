@@ -46,10 +46,35 @@ export interface VarlockStatus {
 // ── Process streaming events ──
 
 export type ProcessEvent =
+  | {
+      event: "launchLog";
+      data: {
+        envStatus: "created" | "reused" | "failed" | null;
+        interpreterPath: string | null;
+        lines: string[];
+      };
+    }
+  | {
+      event: "launchTimeline";
+      data: {
+        stage: string;
+        status: string;
+        detail: string;
+        runtime: string | null;
+      };
+    }
+  | {
+      event: "runDetails";
+      data: {
+        planJson: string;
+      };
+    }
   | { event: "stdout"; data: { data: string } }
   | { event: "stderr"; data: { data: string } }
   | { event: "exit"; data: { code: number | null } }
   | { event: "error"; data: { message: string } };
+
+export type ExecutionPolicy = "auto" | "always" | "never";
 
 // ── Project types ──
 
@@ -157,6 +182,36 @@ export interface DiscoveredCommand {
   category: CommandCategory;
   isCustom: boolean;
   sortOrder: number;
+}
+
+export interface PythonVenvCandidate {
+  name: string;
+  path: string;
+  valid: boolean;
+  interpreterPath: string | null;
+}
+
+export interface PythonEnvState {
+  isPythonProject: boolean;
+  hasRequirements: boolean;
+  hasPyproject: boolean;
+  selectedEnv: PythonVenvCandidate | null;
+  candidates: PythonVenvCandidate[];
+  preferredBaseInterpreterPath: string | null;
+  availableInterpreters: PythonInterpreterCandidate[];
+}
+
+export interface PythonInterpreterCandidate {
+  label: string;
+  version: string | null;
+  executablePath: string;
+  source: string;
+}
+
+export interface PythonEnvWarmupLog {
+  status: "created" | "reused" | "failed";
+  interpreterPath: string | null;
+  outputLines: string[];
 }
 
 export interface ProjectScan {
@@ -459,3 +514,29 @@ export type LaunchError =
   | { type: "vaultResolutionFailed"; key: string; reason: string }
   | { type: "spawnFailed"; reason: string }
   | { type: "invalidInput"; reason: string };
+
+export function formatLaunchError(e: any): string {
+  if (!e || typeof e !== "object") return String(e);
+  switch (e.type) {
+    case "vaultLocked":
+      return "Vault is locked. Please unlock it first.";
+    case "envValidationFailed":
+      return (e as any).issues?.join("\n") ?? "Environment validation failed";
+    case "commandNotFound":
+      return `Command not found: ${(e as any).command}`;
+    case "vaultSecretMissing":
+      return `Secret missing in vault: ${(e as any).key} for environment ${(e as any).env}`;
+    case "vaultResolutionFailed":
+      return `Failed to resolve secret ${(e as any).key}: ${(e as any).reason}`;
+    case "spawnFailed":
+      return (e as any).reason ?? "Failed to spawn process";
+    case "invalidInput":
+      return (e as any).reason ?? "Invalid input";
+    default:
+      try {
+        return JSON.stringify(e);
+      } catch {
+        return String(e);
+      }
+  }
+}

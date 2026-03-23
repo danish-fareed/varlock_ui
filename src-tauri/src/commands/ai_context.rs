@@ -5,8 +5,8 @@
 //! actual sensitive values.
 
 use crate::state::vault_state::VaultState;
-use crate::vault::vault_db::{VaultDb, VaultDbError};
 use crate::vault::crypto::SecureKey;
+use crate::vault::vault_db::{VaultDb, VaultDbError};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
@@ -160,8 +160,10 @@ mod tests {
         let db = VaultDb::open_in_memory().unwrap();
         let dek = db.setup("test").unwrap();
 
-        db.set_variable(&dek, "p1", "dev", "PORT", "3000", "port", false, true, "App port")
-            .unwrap();
+        db.set_variable(
+            &dek, "p1", "dev", "PORT", "3000", "port", false, true, "App port",
+        )
+        .unwrap();
         db.set_variable(
             &dek,
             "p1",
@@ -182,7 +184,11 @@ mod tests {
         let port_var = ctx.variables.iter().find(|v| v.key == "PORT").unwrap();
         assert_eq!(port_var.example, "3000"); // non-sensitive: real value
 
-        let stripe_var = ctx.variables.iter().find(|v| v.key == "STRIPE_KEY").unwrap();
+        let stripe_var = ctx
+            .variables
+            .iter()
+            .find(|v| v.key == "STRIPE_KEY")
+            .unwrap();
         assert!(!stripe_var.example.contains("REAL_SECRET")); // sensitive: redacted
         assert!(stripe_var.example.contains("sk_test")); // mock value
     }
@@ -213,8 +219,8 @@ pub fn ai_context_json(
     env_name: String,
 ) -> Result<String, String> {
     let dek = vault.require_dek()?;
-    let ctx = generate_context(&dek, &vault.db, &project_id, &env_name)
-        .map_err(|e| e.to_string())?;
+    let ctx =
+        generate_context(&dek, &vault.db, &project_id, &env_name).map_err(|e| e.to_string())?;
     context_to_json(&ctx).map_err(|e| e.to_string())
 }
 
@@ -226,8 +232,8 @@ pub fn ai_context_markdown(
     env_name: String,
 ) -> Result<String, String> {
     let dek = vault.require_dek()?;
-    let ctx = generate_context(&dek, &vault.db, &project_id, &env_name)
-        .map_err(|e| e.to_string())?;
+    let ctx =
+        generate_context(&dek, &vault.db, &project_id, &env_name).map_err(|e| e.to_string())?;
     Ok(context_to_markdown(&ctx))
 }
 
@@ -239,6 +245,5 @@ pub fn ai_context_data(
     env_name: String,
 ) -> Result<AiContext, String> {
     let dek = vault.require_dek()?;
-    generate_context(&dek, &vault.db, &project_id, &env_name)
-        .map_err(|e| e.to_string())
+    generate_context(&dek, &vault.db, &project_id, &env_name).map_err(|e| e.to_string())
 }

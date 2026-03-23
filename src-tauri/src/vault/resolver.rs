@@ -4,8 +4,8 @@
 //! All `varlock://vault/KEY` references are resolved directly from the vault DB
 //! using `(project_id, env, key)` as the lookup.
 
-use crate::vault::vault_db::{VaultDb, VaultDbError};
 use crate::vault::crypto::SecureKey;
+use crate::vault::vault_db::{VaultDb, VaultDbError};
 use std::collections::HashMap;
 
 /// The varlock:// URI scheme prefix.
@@ -39,7 +39,10 @@ pub fn resolve_env(
 
         if let Some(eq_pos) = rest.find('=') {
             let key = rest[..eq_pos].trim();
-            let value = rest[eq_pos + 1..].trim().trim_matches('"').trim_matches('\'');
+            let value = rest[eq_pos + 1..]
+                .trim()
+                .trim_matches('"')
+                .trim_matches('\'');
 
             if let Some(ref_key) = value.strip_prefix(VARLOCK_URI_PREFIX) {
                 // This is a vault reference — resolve from DB
@@ -60,9 +63,10 @@ pub fn resolve_env(
 
     if !errors.is_empty() {
         return Err(VaultDbError::Crypto(
-            crate::vault::crypto::CryptoError::InvalidData(
-                format!("Unresolvable references:\n{}", errors.join("\n"))
-            ),
+            crate::vault::crypto::CryptoError::InvalidData(format!(
+                "Unresolvable references:\n{}",
+                errors.join("\n")
+            )),
         ));
     }
 
@@ -89,8 +93,18 @@ mod tests {
         let db = VaultDb::open_in_memory().unwrap();
         let dek = db.setup("test").unwrap();
 
-        db.set_variable(&dek, "p1", "dev", "API_KEY", "sk_live_abc", "string", true, true, "")
-            .unwrap();
+        db.set_variable(
+            &dek,
+            "p1",
+            "dev",
+            "API_KEY",
+            "sk_live_abc",
+            "string",
+            true,
+            true,
+            "",
+        )
+        .unwrap();
 
         let env_content = "PORT=3000\nAPI_KEY=varlock://vault/API_KEY\nDEBUG=true";
         let resolved = resolve_env(env_content, &dek, &db, "p1", "dev").unwrap();

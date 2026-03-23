@@ -1,11 +1,11 @@
+use crate::state::app_state::AppState;
+use notify::Watcher;
+use serde::Serialize;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
-use notify::Watcher;
-use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
-use crate::state::app_state::AppState;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -114,10 +114,7 @@ fn validate_env_file_path(path: &str, project_paths: &[PathBuf]) -> Result<PathB
     }
 
     // Step 3: filename must start with .env
-    let filename = canonical
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("");
+    let filename = canonical.file_name().and_then(|n| n.to_str()).unwrap_or("");
     if !filename.starts_with(".env") {
         return Err("File must be a .env file".to_string());
     }
@@ -128,19 +125,28 @@ fn validate_env_file_path(path: &str, project_paths: &[PathBuf]) -> Result<PathB
 /// Read the contents of an .env file.
 /// Path must be inside a registered project and filename must start with .env.
 #[tauri::command]
-pub async fn read_env_file(path: String, app_state: tauri::State<'_, AppState>) -> Result<String, String> {
+pub async fn read_env_file(
+    path: String,
+    app_state: tauri::State<'_, AppState>,
+) -> Result<String, String> {
     let project_paths = app_state.get_project_paths();
     let validated = validate_env_file_path(&path, &project_paths)?;
-    fs::read_to_string(&validated).map_err(|e| format!("Failed to read {}: {}", validated.display(), e))
+    fs::read_to_string(&validated)
+        .map_err(|e| format!("Failed to read {}: {}", validated.display(), e))
 }
 
 /// Write content to an .env file.
 /// Path must be inside a registered project and filename must start with .env.
 #[tauri::command]
-pub async fn write_env_file(path: String, content: String, app_state: tauri::State<'_, AppState>) -> Result<(), String> {
+pub async fn write_env_file(
+    path: String,
+    content: String,
+    app_state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
     let project_paths = app_state.get_project_paths();
     let validated = validate_env_file_path(&path, &project_paths)?;
-    fs::write(&validated, &content).map_err(|e| format!("Failed to write {}: {}", validated.display(), e))
+    fs::write(&validated, &content)
+        .map_err(|e| format!("Failed to write {}: {}", validated.display(), e))
 }
 
 /// List all .env* files in a project directory.
@@ -247,24 +253,25 @@ pub async fn watch_project(project_id: String, cwd: String, app: AppHandle) -> R
     let app_handle = app.clone();
     let pid = project_id.clone();
 
-    let mut watcher = notify::recommended_watcher(move |res: Result<notify::Event, notify::Error>| {
-        if let Ok(event) = res {
-            // Only care about modifications and creations to .env files
-            let dominated_by_env = event.paths.iter().any(|p| {
-                p.file_name()
-                    .and_then(|n| n.to_str())
-                    .map(|n| n.starts_with(".env"))
-                    .unwrap_or(false)
-            });
+    let mut watcher =
+        notify::recommended_watcher(move |res: Result<notify::Event, notify::Error>| {
+            if let Ok(event) = res {
+                // Only care about modifications and creations to .env files
+                let dominated_by_env = event.paths.iter().any(|p| {
+                    p.file_name()
+                        .and_then(|n| n.to_str())
+                        .map(|n| n.starts_with(".env"))
+                        .unwrap_or(false)
+                });
 
-            if dominated_by_env {
-                if let Err(e) = app_handle.emit("file-changed", &pid) {
-                    eprintln!("Warning: Failed to emit file-changed event: {}", e);
+                if dominated_by_env {
+                    if let Err(e) = app_handle.emit("file-changed", &pid) {
+                        eprintln!("Warning: Failed to emit file-changed event: {}", e);
+                    }
                 }
             }
-        }
-    })
-    .map_err(|e| format!("Failed to create watcher: {}", e))?;
+        })
+        .map_err(|e| format!("Failed to create watcher: {}", e))?;
 
     watcher
         .watch(Path::new(&dir), notify::RecursiveMode::NonRecursive)

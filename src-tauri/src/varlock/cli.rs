@@ -4,7 +4,9 @@ use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 
 use super::detect::find_varlock_binary;
-use super::types::{VarlockLeak, VarlockLoadFullResult, VarlockLoadResult, VarlockScanResult, VarlockStatus};
+use super::types::{
+    VarlockLeak, VarlockLoadFullResult, VarlockLoadResult, VarlockScanResult, VarlockStatus,
+};
 
 /// Default timeout for CLI operations (30 seconds).
 const CLI_TIMEOUT: Duration = Duration::from_secs(30);
@@ -120,11 +122,7 @@ async fn get_version(binary_path: &Path) -> Option<String> {
         .ok()?;
 
     if output.status.success() {
-        Some(
-            String::from_utf8_lossy(&output.stdout)
-                .trim()
-                .to_string(),
-        )
+        Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
     } else {
         None
     }
@@ -397,7 +395,12 @@ pub async fn build_run_command(
     let binary_str = binary.to_string_lossy().to_string();
 
     // Build args: varlock run -- <user_command>
-    let mut args = vec!["run".to_string(), "--cwd".to_string(), cwd.to_string(), "--".to_string()];
+    let mut args = vec![
+        "run".to_string(),
+        "--cwd".to_string(),
+        cwd.to_string(),
+        "--".to_string(),
+    ];
 
     // Split the user command into parts for the shell
     if cfg!(target_os = "windows") {

@@ -82,10 +82,12 @@ impl VaultDb {
         }
 
         // Enable WAL mode for better concurrency and foreign keys for cascades
-        conn.execute_batch("
+        conn.execute_batch(
+            "
             PRAGMA journal_mode=WAL;
             PRAGMA foreign_keys=ON;
-        ")?;
+        ",
+        )?;
 
         let db = Self {
             conn: Mutex::new(conn),
@@ -223,22 +225,23 @@ impl VaultDb {
         key: &str,
     ) -> Result<VaultVariable, VaultDbError> {
         let conn = self.conn.lock().unwrap();
-        let row = conn.query_row(
-            "SELECT encrypted_key, encrypted_value, var_type, sensitive, required, description 
+        let row = conn
+            .query_row(
+                "SELECT encrypted_key, encrypted_value, var_type, sensitive, required, description 
              FROM variables WHERE project_id = ?1 AND env = ?2 AND key_hash = ?3",
-            params![project_id, env, Self::key_hash(key)],
-            |row| {
-                Ok((
-                    row.get::<_, Vec<u8>>(0)?,
-                    row.get::<_, Vec<u8>>(1)?,
-                    row.get::<_, String>(2)?,
-                    row.get::<_, bool>(3)?,
-                    row.get::<_, bool>(4)?,
-                    row.get::<_, String>(5)?,
-                ))
-            },
-        )
-        .map_err(|_| VaultDbError::NotFound(key.to_string()))?;
+                params![project_id, env, Self::key_hash(key)],
+                |row| {
+                    Ok((
+                        row.get::<_, Vec<u8>>(0)?,
+                        row.get::<_, Vec<u8>>(1)?,
+                        row.get::<_, String>(2)?,
+                        row.get::<_, bool>(3)?,
+                        row.get::<_, bool>(4)?,
+                        row.get::<_, String>(5)?,
+                    ))
+                },
+            )
+            .map_err(|_| VaultDbError::NotFound(key.to_string()))?;
 
         let (encrypted_key, encrypted_value, var_type, sensitive, required, description) = row;
 
@@ -335,8 +338,16 @@ impl VaultDb {
 
         let mut results = Vec::new();
         for row_result in rows {
-            let (project_id, env, encrypted_key, encrypted_value, var_type, sensitive, required, description) =
-                row_result?;
+            let (
+                project_id,
+                env,
+                encrypted_key,
+                encrypted_value,
+                var_type,
+                sensitive,
+                required,
+                description,
+            ) = row_result?;
 
             let key = String::from_utf8(crypto::decrypt(&encrypted_key, dek)?)
                 .map_err(|e| CryptoError::Decryption(format!("Key UTF-8 error: {}", e)))?;
@@ -377,11 +388,7 @@ impl VaultDb {
 
     /// Delete all variables for a given project+env.
     #[allow(dead_code)]
-    pub fn delete_all_variables(
-        &self,
-        project_id: &str,
-        env: &str,
-    ) -> Result<usize, VaultDbError> {
+    pub fn delete_all_variables(&self, project_id: &str, env: &str) -> Result<usize, VaultDbError> {
         let conn = self.conn.lock().unwrap();
         let affected = conn.execute(
             "DELETE FROM variables WHERE project_id = ?1 AND env = ?2",
@@ -444,12 +451,13 @@ impl VaultDb {
         let mut stmt = conn.prepare(
             "SELECT target_project_id FROM vault_sharing 
              WHERE source_project_id = ?1 AND source_env = ?2 AND key_hash = ?3
-             ORDER BY target_project_id"
+             ORDER BY target_project_id",
         )?;
 
-        let rows = stmt.query_map(params![source_project_id, env, Self::key_hash(key)], |row| {
-            row.get::<_, String>(0)
-        })?;
+        let rows = stmt.query_map(
+            params![source_project_id, env, Self::key_hash(key)],
+            |row| row.get::<_, String>(0),
+        )?;
 
         let mut targets = Vec::new();
         for t in rows {
@@ -492,8 +500,16 @@ impl VaultDb {
 
         let mut results = Vec::new();
         for row_result in rows {
-            let (project_id, env, encrypted_key, encrypted_value, var_type, sensitive, required, description) =
-                row_result?;
+            let (
+                project_id,
+                env,
+                encrypted_key,
+                encrypted_value,
+                var_type,
+                sensitive,
+                required,
+                description,
+            ) = row_result?;
 
             let key = String::from_utf8(crypto::decrypt(&encrypted_key, dek)?)
                 .map_err(|e| CryptoError::Decryption(format!("Key UTF-8 error: {}", e)))?;
@@ -541,13 +557,9 @@ impl VaultDb {
 
             if let Some(eq_pos) = rest.find('=') {
                 let key = &rest[..eq_pos];
-                let value = rest[eq_pos + 1..]
-                    .trim_matches('"')
-                    .trim_matches('\'');
+                let value = rest[eq_pos + 1..].trim_matches('"').trim_matches('\'');
 
-                let is_sensitive = sensitive_keys
-                    .iter()
-                    .any(|sk| sk.eq_ignore_ascii_case(key));
+                let is_sensitive = sensitive_keys.iter().any(|sk| sk.eq_ignore_ascii_case(key));
 
                 self.set_variable(
                     dek,
@@ -761,12 +773,18 @@ mod tests {
     fn test_get_all_variables() {
         let (db, dek) = setup_test_vault();
 
-        db.set_variable(&dek, "proj1", "dev", "PORT", "3000", "port", false, true, "")
-            .unwrap();
-        db.set_variable(&dek, "proj1", "dev", "API_KEY", "sk_abc", "string", true, true, "")
-            .unwrap();
-        db.set_variable(&dek, "proj1", "dev", "DEBUG", "true", "boolean", false, false, "")
-            .unwrap();
+        db.set_variable(
+            &dek, "proj1", "dev", "PORT", "3000", "port", false, true, "",
+        )
+        .unwrap();
+        db.set_variable(
+            &dek, "proj1", "dev", "API_KEY", "sk_abc", "string", true, true, "",
+        )
+        .unwrap();
+        db.set_variable(
+            &dek, "proj1", "dev", "DEBUG", "true", "boolean", false, false, "",
+        )
+        .unwrap();
 
         let vars = db.get_variables(&dek, "proj1", "dev").unwrap();
         assert_eq!(vars.len(), 3);
@@ -776,10 +794,22 @@ mod tests {
     fn test_update_variable() {
         let (db, dek) = setup_test_vault();
 
-        db.set_variable(&dek, "proj1", "dev", "PORT", "3000", "port", false, true, "")
-            .unwrap();
-        db.set_variable(&dek, "proj1", "dev", "PORT", "8080", "port", false, true, "Updated port")
-            .unwrap();
+        db.set_variable(
+            &dek, "proj1", "dev", "PORT", "3000", "port", false, true, "",
+        )
+        .unwrap();
+        db.set_variable(
+            &dek,
+            "proj1",
+            "dev",
+            "PORT",
+            "8080",
+            "port",
+            false,
+            true,
+            "Updated port",
+        )
+        .unwrap();
 
         let var = db.get_variable(&dek, "proj1", "dev", "PORT").unwrap();
         assert_eq!(var.value, "8080");
@@ -790,8 +820,10 @@ mod tests {
     fn test_delete_variable() {
         let (db, dek) = setup_test_vault();
 
-        db.set_variable(&dek, "proj1", "dev", "TEMP", "val", "string", false, false, "")
-            .unwrap();
+        db.set_variable(
+            &dek, "proj1", "dev", "TEMP", "val", "string", false, false, "",
+        )
+        .unwrap();
 
         assert!(db.delete_variable("proj1", "dev", "TEMP").unwrap());
         assert!(!db.delete_variable("proj1", "dev", "TEMP").unwrap()); // already deleted
@@ -802,10 +834,14 @@ mod tests {
     fn test_env_isolation() {
         let (db, dek) = setup_test_vault();
 
-        db.set_variable(&dek, "proj1", "dev", "PORT", "3000", "port", false, true, "")
-            .unwrap();
-        db.set_variable(&dek, "proj1", "staging", "PORT", "8080", "port", false, true, "")
-            .unwrap();
+        db.set_variable(
+            &dek, "proj1", "dev", "PORT", "3000", "port", false, true, "",
+        )
+        .unwrap();
+        db.set_variable(
+            &dek, "proj1", "staging", "PORT", "8080", "port", false, true, "",
+        )
+        .unwrap();
 
         let dev = db.get_variable(&dek, "proj1", "dev", "PORT").unwrap();
         let staging = db.get_variable(&dek, "proj1", "staging", "PORT").unwrap();
@@ -846,10 +882,14 @@ DEBUG=true
     fn test_generate_ref_env() {
         let (db, dek) = setup_test_vault();
 
-        db.set_variable(&dek, "proj1", "dev", "PORT", "3000", "port", false, true, "")
-            .unwrap();
-        db.set_variable(&dek, "proj1", "dev", "API_KEY", "secret", "string", true, true, "")
-            .unwrap();
+        db.set_variable(
+            &dek, "proj1", "dev", "PORT", "3000", "port", false, true, "",
+        )
+        .unwrap();
+        db.set_variable(
+            &dek, "proj1", "dev", "API_KEY", "secret", "string", true, true, "",
+        )
+        .unwrap();
 
         let ref_env = db.generate_ref_env(&dek, "proj1", "dev").unwrap();
 
@@ -864,14 +904,21 @@ DEBUG=true
 
         db.log_access("read", "proj1", Some("dev"), Some("API_KEY"), "local", None)
             .unwrap();
-        db.log_access("write", "proj1", Some("dev"), Some("PORT"), "local", Some("{\"old\":\"3000\"}"))
-            .unwrap();
+        db.log_access(
+            "write",
+            "proj1",
+            Some("dev"),
+            Some("PORT"),
+            "local",
+            Some("{\"old\":\"3000\"}"),
+        )
+        .unwrap();
 
         // Verify entries exist
         let conn = db.conn.lock().unwrap();
-        let count: i64 =
-            conn.query_row("SELECT COUNT(*) FROM access_log", [], |row| row.get(0))
-                .unwrap();
+        let count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM access_log", [], |row| row.get(0))
+            .unwrap();
         assert_eq!(count, 2);
     }
 
@@ -879,8 +926,10 @@ DEBUG=true
     fn test_wrong_dek_cannot_read() {
         let (db, dek) = setup_test_vault();
 
-        db.set_variable(&dek, "proj1", "dev", "SECRET", "value", "string", true, true, "")
-            .unwrap();
+        db.set_variable(
+            &dek, "proj1", "dev", "SECRET", "value", "string", true, true, "",
+        )
+        .unwrap();
 
         // Try to read with a different DEK
         let wrong_dek = crypto::generate_dek();
@@ -912,17 +961,22 @@ DEBUG=true
         // Log with a known key name
         let key_name = "API_KEY";
         let expected_hash = VaultDb::key_hash(key_name);
-        db.log_access("read", "proj1", Some("dev"), Some(&expected_hash), "local", None)
-            .unwrap();
+        db.log_access(
+            "read",
+            "proj1",
+            Some("dev"),
+            Some(&expected_hash),
+            "local",
+            None,
+        )
+        .unwrap();
 
         // Verify the stored key is the hash, not the plaintext
         let conn = db.conn.lock().unwrap();
         let stored_key: String = conn
-            .query_row(
-                "SELECT key FROM access_log WHERE id = 1",
-                [],
-                |row| row.get(0),
-            )
+            .query_row("SELECT key FROM access_log WHERE id = 1", [], |row| {
+                row.get(0)
+            })
             .unwrap();
 
         assert_eq!(stored_key, expected_hash);

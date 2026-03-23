@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { CommandCard } from "./CommandCard";
+import { PythonEnvPanel } from "./PythonEnvPanel";
 import { EnvSelectorBar } from "./EnvSelectorBar";
 import { useCommandStore } from "@/stores/commandStore";
 import { useProjectStore } from "@/stores/projectStore";
@@ -110,6 +111,12 @@ export function CommandGrid() {
   const selectedScopePath = useCommandStore((s) => s.selectedScopePath);
   const [showAddModal, setShowAddModal] = useState(false);
 
+  const activeNode = useMemo(() => {
+    if (!scan) return null;
+    const targetNodeId = selectedNodeId ?? scan.rootNodeId;
+    return scan.nodes.find((node) => node.id === targetNodeId) ?? null;
+  }, [scan, selectedNodeId]);
+
   const visibleCommands = useMemo(() => {
     if (!scan) return [];
 
@@ -123,6 +130,11 @@ export function CommandGrid() {
 
     return scan.commands.filter((c) => c.nodeId === targetNodeId);
   }, [scan, selectedNodeId, selectedScopePath]);
+
+  const visiblePythonCommandCount = useMemo(
+    () => visibleCommands.filter((cmd) => cmd.source === "python" || cmd.requiresVenv).length,
+    [visibleCommands],
+  );
 
   if (isScanning) {
     return (
@@ -167,6 +179,14 @@ export function CommandGrid() {
 
   return (
     <div className="animate-fade-in space-y-5">
+      {activeNode && (
+        <PythonEnvPanel
+          cwd={activeNode.path}
+          rootCwd={scan.nodes.find((n) => n.id === scan.rootNodeId)?.path ?? activeNode.path}
+          visiblePythonCommandCount={visiblePythonCommandCount}
+        />
+      )}
+
       {/* Header */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">

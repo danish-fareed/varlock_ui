@@ -71,7 +71,7 @@ fn should_skip_dir(name: &str) -> bool {
             | "node_modules"
             | ".venv"
             | "venv"
-            | ".env"
+            | "env"
             | "dist"
             | "build"
             | ".next"

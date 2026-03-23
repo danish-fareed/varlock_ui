@@ -1,5 +1,5 @@
-use crate::state::app_state::{AppState, Project, ProjectStatus};
 use crate::discovery::detector::resolve_registration_root;
+use crate::state::app_state::{AppState, Project, ProjectStatus};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -104,7 +104,8 @@ pub async fn project_clone_github(
         let name = raw_name.trim();
         if name.is_empty() {
             infer_repo_name(trimmed_url).ok_or_else(|| {
-                "Unable to infer repository folder name from URL. Provide a folder name.".to_string()
+                "Unable to infer repository folder name from URL. Provide a folder name."
+                    .to_string()
             })?
         } else {
             validate_folder_name(name)?
@@ -179,11 +180,9 @@ pub async fn pick_directory(app: tauri::AppHandle) -> Result<Option<String>, Str
 
     // Use blocking_pick_folder wrapped in spawn_blocking to avoid
     // blocking the Tokio async runtime while the native dialog is open.
-    let result = tokio::task::spawn_blocking(move || {
-        app.dialog().file().blocking_pick_folder()
-    })
-    .await
-    .map_err(|e| format!("Dialog task failed: {}", e))?;
+    let result = tokio::task::spawn_blocking(move || app.dialog().file().blocking_pick_folder())
+        .await
+        .map_err(|e| format!("Dialog task failed: {}", e))?;
 
     Ok(result.map(|p| p.to_string()))
 }

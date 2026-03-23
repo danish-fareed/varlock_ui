@@ -1,5 +1,5 @@
 use crate::discovery::detector::{detect_topology, normalize_rel_path};
-use crate::discovery::python::{apply_python_substitution, detect_python_environment};
+use crate::discovery::python::{detect_python_environment, get_preferred_python_interpreter};
 use crate::discovery::types::{
     CloudJobConfig, CommandType, DiscoveredCommand, EnvScope, ProjectNode, ProjectNodeType,
     ProjectScan, ProjectTopology, RuntimeKind,
@@ -420,15 +420,19 @@ fn discover_node_commands(node: &ProjectNode, scopes: &[EnvScope]) -> Vec<Discov
             });
         }
 
-        if let Ok(py_env) = detect_python_environment(&node_path) {
+        if let Some(preferred) = get_preferred_python_interpreter(&node_path, &node_path) {
             for cmd in out
                 .iter_mut()
                 .filter(|c| c.node_id == node.id && c.requires_venv)
             {
-                let resolved = apply_python_substitution(cmd, &py_env);
-                cmd.command = resolved.command;
-                cmd.args = resolved.args;
-                cmd.interpreter_override = resolved.interpreter_override;
+                cmd.interpreter_override = Some(preferred.clone());
+            }
+        } else if let Ok(py_env) = detect_python_environment(&node_path) {
+            for cmd in out
+                .iter_mut()
+                .filter(|c| c.node_id == node.id && c.requires_venv)
+            {
+                cmd.interpreter_override = Some(py_env.interpreter.to_string_lossy().to_string());
             }
         } else if let Some(interpreter) = &node.python_interpreter_path {
             for cmd in out

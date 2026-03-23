@@ -21,11 +21,14 @@ interface CommandCardProps {
   command: DiscoveredCommand;
 }
 
+const EMPTY_LOGS: string[] = [];
+
 export function CommandCard({ command }: CommandCardProps) {
   const { activeProject } = useProjectStore();
   const { activeEnv: envName } = useEnvironmentStore();
   const running = useCommandStore((s) => s.running[command.id]);
   const errors = useCommandStore((s) => s.commandErrors[command.id]);
+  const logs = useCommandStore((s) => s.logBuffers[command.id]);
   const { launchCommand, stopCommand, clearError } = useCommandStore();
 
   const [uptime, setUptime] = useState("");
@@ -39,6 +42,7 @@ export function CommandCard({ command }: CommandCardProps) {
   const sourceFile = command.sourceFile || "unknown";
   const commandType = command.commandType || "local-process";
   const rawCmd = command.rawCmd || [command.command, ...(command.args ?? [])].join(" ");
+  const recentLogs = (logs ?? EMPTY_LOGS).slice(-2);
 
   // Uptime ticker
   useEffect(() => {
@@ -96,6 +100,15 @@ export function CommandCard({ command }: CommandCardProps) {
           <div className="text-[10px] text-text-muted truncate mt-0.5">
             {scopePath}:{sourceFile} · {commandType}
           </div>
+          {recentLogs.map((line, idx) => (
+            <div
+              key={`${command.id}-log-${idx}`}
+              className="text-[10px] font-mono text-text-muted truncate mt-0.5"
+              title={line}
+            >
+              {line}
+            </div>
+          ))}
         </div>
 
         {/* Running state badge */}

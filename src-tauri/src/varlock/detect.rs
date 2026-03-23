@@ -109,7 +109,12 @@ fn select_windows_binary(candidates: Vec<PathBuf>) -> Option<PathBuf> {
                 .find(|path| path.extension().and_then(|ext| ext.to_str()) == Some("exe"))
                 .cloned()
         })
-        .or_else(|| candidates.into_iter().next().map(normalize_windows_binary_path))
+        .or_else(|| {
+            candidates
+                .into_iter()
+                .next()
+                .map(normalize_windows_binary_path)
+        })
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -124,14 +129,29 @@ fn common_install_paths() -> Vec<PathBuf> {
     if let Some(home) = dirs::home_dir() {
         if cfg!(target_os = "windows") {
             // npm global installs on Windows
-            paths.push(home.join("AppData").join("Roaming").join("npm").join("varlock.cmd"));
-            paths.push(home.join("AppData").join("Roaming").join("npm").join("varlock"));
+            paths.push(
+                home.join("AppData")
+                    .join("Roaming")
+                    .join("npm")
+                    .join("varlock.cmd"),
+            );
+            paths.push(
+                home.join("AppData")
+                    .join("Roaming")
+                    .join("npm")
+                    .join("varlock"),
+            );
         } else {
             // npm global installs on Unix
             paths.push(home.join(".npm-global").join("bin").join("varlock"));
 
             // pnpm global (Unix only)
-            paths.push(home.join(".local").join("share").join("pnpm").join("varlock"));
+            paths.push(
+                home.join(".local")
+                    .join("share")
+                    .join("pnpm")
+                    .join("varlock"),
+            );
 
             // yarn global (Unix only)
             paths.push(home.join(".yarn").join("bin").join("varlock"));

@@ -2,18 +2,19 @@ mod cli_entry;
 mod commands;
 mod db;
 mod discovery;
+mod launcher;
 mod state;
 mod varlock;
 mod vault;
 
 use commands::filesystem::WatcherState;
+use rusqlite::Connection;
 use state::app_state::AppState;
 use state::process_registry::ProcessRegistry;
 use state::process_state::ProcessState;
 use state::vault_state::VaultState;
-use vault::vault_db::VaultDb;
 use tauri::Manager;
-use rusqlite::Connection;
+use vault::vault_db::VaultDb;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -23,7 +24,10 @@ pub fn run() {
 
     // Apply non-vault local DB migrations for project intelligence layer.
     if let Err(e) = apply_local_project_intelligence_migration() {
-        eprintln!("Warning: failed to apply local project intelligence migration: {}", e);
+        eprintln!(
+            "Warning: failed to apply local project intelligence migration: {}",
+            e
+        );
     }
 
     // Open (or create) the vault database
@@ -54,6 +58,11 @@ pub fn run() {
             commands::process::process_kill,
             commands::process::stop_command,
             commands::process::direct_run,
+            commands::python_env::get_python_env_state,
+            commands::python_env::list_python_interpreters_cmd,
+            commands::python_env::set_preferred_python_interpreter_cmd,
+            commands::python_env::warmup_python_env,
+            commands::python_env::rebuild_python_env,
             commands::project::project_list,
             commands::project::project_add,
             commands::project::project_clone_github,
@@ -104,12 +113,10 @@ pub fn run() {
         .setup(|app| {
             // Start background idle timeout checker
             let handle = app.handle().clone();
-            std::thread::spawn(move || {
-                loop {
-                    std::thread::sleep(std::time::Duration::from_secs(30));
-                    if let Some(vault) = handle.try_state::<VaultState>() {
-                        vault.check_idle_timeout();
-                    }
+            std::thread::spawn(move || loop {
+                std::thread::sleep(std::time::Duration::from_secs(30));
+                if let Some(vault) = handle.try_state::<VaultState>() {
+                    vault.check_idle_timeout();
                 }
             });
             Ok(())
@@ -143,6 +150,5 @@ fn apply_local_project_intelligence_migration() -> Result<(), String> {
     }
 
     let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
-    db::project_intelligence::apply_project_intelligence_migration(&conn)
-        .map_err(|e| e.to_string())
+    db::project_intelligence::apply_project_intelligence_migration(&conn).map_err(|e| e.to_string())
 }

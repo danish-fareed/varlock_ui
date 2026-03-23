@@ -1,5 +1,5 @@
-pub mod crypto;
-pub mod vault_db;
-pub mod resolver;
-pub mod keyring;
 pub mod audit;
+pub mod crypto;
+pub mod keyring;
+pub mod resolver;
+pub mod vault_db;

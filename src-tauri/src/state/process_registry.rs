@@ -60,7 +60,10 @@ impl ProcessRegistry {
             .unwrap_or_else(|| PathBuf::from("."))
             .join("varlock-ui");
         if let Err(e) = fs::create_dir_all(&data_dir) {
-            eprintln!("Warning: Failed to create data directory {:?}: {}", data_dir, e);
+            eprintln!(
+                "Warning: Failed to create data directory {:?}: {}",
+                data_dir, e
+            );
         }
         data_dir.join("process_registry.json")
     }
@@ -77,7 +80,10 @@ impl ProcessRegistry {
         match serde_json::to_string_pretty(&*data) {
             Ok(json) => {
                 if let Err(e) = fs::write(&path, json) {
-                    eprintln!("Error: Failed to persist process registry to {:?}: {}", path, e);
+                    eprintln!(
+                        "Error: Failed to persist process registry to {:?}: {}",
+                        path, e
+                    );
                 }
             }
             Err(e) => {
@@ -117,7 +123,11 @@ impl ProcessRegistry {
     pub fn mark_stopped(&self, process_uuid: &str) {
         {
             let mut data = self.lock();
-            if let Some(entry) = data.processes.iter_mut().find(|e| e.process_uuid == process_uuid) {
+            if let Some(entry) = data
+                .processes
+                .iter_mut()
+                .find(|e| e.process_uuid == process_uuid)
+            {
                 entry.status = ProcessRegistryStatus::Stopped;
             }
         }
@@ -129,7 +139,11 @@ impl ProcessRegistry {
     pub fn mark_crashed(&self, process_uuid: &str) {
         {
             let mut data = self.lock();
-            if let Some(entry) = data.processes.iter_mut().find(|e| e.process_uuid == process_uuid) {
+            if let Some(entry) = data
+                .processes
+                .iter_mut()
+                .find(|e| e.process_uuid == process_uuid)
+            {
                 entry.status = ProcessRegistryStatus::Crashed;
             }
         }
@@ -165,9 +179,7 @@ impl ProcessRegistry {
     fn is_pid_alive(pid: u32) -> bool {
         use std::ptr;
         // PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
-        let handle = unsafe {
-            windows_sys::Win32::System::Threading::OpenProcess(0x1000, 0, pid)
-        };
+        let handle = unsafe { windows_sys::Win32::System::Threading::OpenProcess(0x1000, 0, pid) };
         if handle.is_null() || handle == ptr::null_mut() {
             false
         } else {
@@ -190,7 +202,8 @@ impl ProcessRegistry {
         {
             let mut data = self.lock();
             for entry in data.processes.iter_mut() {
-                if entry.status == ProcessRegistryStatus::Running && !Self::is_pid_alive(entry.pid) {
+                if entry.status == ProcessRegistryStatus::Running && !Self::is_pid_alive(entry.pid)
+                {
                     entry.status = ProcessRegistryStatus::Crashed;
                     changed = true;
                 }
@@ -208,9 +221,8 @@ impl ProcessRegistry {
         {
             let mut data = self.lock();
             let before = data.processes.len();
-            data.processes.retain(|e| {
-                e.status == ProcessRegistryStatus::Running || e.started_at > cutoff
-            });
+            data.processes
+                .retain(|e| e.status == ProcessRegistryStatus::Running || e.started_at > cutoff);
             changed = data.processes.len() < before;
         }
         if changed {

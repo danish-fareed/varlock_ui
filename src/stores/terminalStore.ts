@@ -104,6 +104,21 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
         command,
         (event: ProcessEvent) => {
           switch (event.event) {
+            case "launchTimeline": {
+              if (event.data.status === "ok") {
+                break;
+              }
+              const runtimeLabel = event.data.runtime ? ` (${event.data.runtime})` : "";
+              onOutput(
+                session.id,
+                `[launch:${event.data.status}] ${event.data.detail}${runtimeLabel}\r\n`,
+              );
+              break;
+            }
+            case "runDetails": {
+              // Keep run details out of terminal stream; this is for a dedicated details panel.
+              break;
+            }
             case "launchLog": {
               const header = event.data.envStatus
                 ? `[python-env:${event.data.envStatus}]`

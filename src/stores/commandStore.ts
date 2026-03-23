@@ -159,6 +159,20 @@ export const useCommandStore = create<CommandState>((set, get) => ({
         commandLine,
         (event: ProcessEvent) => {
           switch (event.event) {
+            case "launchTimeline": {
+              if (event.data.status === "ok") {
+                break;
+              }
+              const runtime = event.data.runtime ? ` (${event.data.runtime})` : "";
+              queueLines([
+                `[launch:${event.data.status}] ${event.data.detail}${runtime}`,
+              ]);
+              break;
+            }
+            case "runDetails": {
+              // Keep run details for UI details panel only; avoid spamming command logs.
+              break;
+            }
             case "launchLog": {
               const statusText = event.data.envStatus
                 ? `[python-env:${event.data.envStatus}]`

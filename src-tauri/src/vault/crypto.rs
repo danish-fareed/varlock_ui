@@ -9,7 +9,7 @@
 //! Nonce strategy: Random 192-bit via OsRng per encrypt call.
 //! Birthday-bound collision at 2^96 operations ≈ 2^-96 — safe for <<10M secrets.
 
-use argon2::{Argon2, Algorithm, Version, Params};
+use argon2::{Algorithm, Argon2, Params, Version};
 use chacha20poly1305::{
     aead::{Aead, KeyInit, OsRng},
     XChaCha20Poly1305, XNonce,
@@ -266,9 +266,7 @@ pub fn encrypt(data: &[u8], dek: &SecureKey) -> Result<Vec<u8>, CryptoError> {
 /// Input format: [nonce (24 bytes)] [ciphertext + tag]
 pub fn decrypt(encrypted: &[u8], dek: &SecureKey) -> Result<Vec<u8>, CryptoError> {
     if encrypted.len() < NONCE_LEN + 16 {
-        return Err(CryptoError::InvalidData(
-            "Encrypted data too short".into(),
-        ));
+        return Err(CryptoError::InvalidData("Encrypted data too short".into()));
     }
 
     let cipher = XChaCha20Poly1305::new_from_slice(dek.as_bytes())
@@ -277,9 +275,9 @@ pub fn decrypt(encrypted: &[u8], dek: &SecureKey) -> Result<Vec<u8>, CryptoError
     let nonce = XNonce::from_slice(&encrypted[..NONCE_LEN]);
     let ciphertext = &encrypted[NONCE_LEN..];
 
-    cipher
-        .decrypt(nonce, ciphertext)
-        .map_err(|_| CryptoError::Decryption("Decryption failed (data tampered or wrong key)".into()))
+    cipher.decrypt(nonce, ciphertext).map_err(|_| {
+        CryptoError::Decryption("Decryption failed (data tampered or wrong key)".into())
+    })
 }
 
 // ── Secret Generation ──
@@ -301,9 +299,7 @@ pub fn generate_secret(secret_type: &str, length: Option<usize>) -> String {
             OsRng.fill_bytes(&mut bytes);
             general_purpose_base64_encode(&bytes)
         }
-        "uuid" => {
-            uuid::Uuid::new_v4().to_string()
-        }
+        "uuid" => uuid::Uuid::new_v4().to_string(),
         "alphanumeric" => {
             let len = length.unwrap_or(32);
             let charset = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -311,7 +307,8 @@ pub fn generate_secret(secret_type: &str, length: Option<usize>) -> String {
         }
         "password" => {
             let len = length.unwrap_or(24);
-            let charset = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+";
+            let charset =
+                b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+";
             generate_from_charset(charset, len)
         }
         _ => {

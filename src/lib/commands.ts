@@ -12,6 +12,10 @@ import type {
   Project,
   ProjectScan,
   CommandType,
+  ExecutionPolicy,
+  PythonEnvState,
+  PythonEnvWarmupLog,
+  PythonInterpreterCandidate,
 } from "./types";
 
 export interface StopStrategy {
@@ -22,9 +26,12 @@ export interface StopStrategy {
 export interface LaunchOptions {
   cwdOverride?: string;
   interpreterOverride?: string;
+  syncPolicy?: ExecutionPolicy;
   commandType?: CommandType;
   orchestratorStop?: StopStrategy;
   envScopePath?: string;
+  requiresVenv?: boolean;
+  source?: string;
 }
 
 // ── Varlock CLI commands ──
@@ -215,6 +222,43 @@ export async function saveCustomCommand(
   category: string,
 ): Promise<void> {
   return invoke<void>("save_custom_command", { cwd, name, command, category });
+}
+
+export async function getPythonEnvState(
+  cwd: string,
+  rootCwd?: string,
+): Promise<PythonEnvState> {
+  return invoke<PythonEnvState>("get_python_env_state", { cwd, rootCwd });
+}
+
+export async function warmupPythonEnv(
+  cwd: string,
+  rootCwd?: string,
+): Promise<PythonEnvWarmupLog> {
+  return invoke<PythonEnvWarmupLog>("warmup_python_env", { cwd, rootCwd });
+}
+
+export async function listPythonInterpreters(cwd: string): Promise<PythonInterpreterCandidate[]> {
+  return invoke<PythonInterpreterCandidate[]>("list_python_interpreters_cmd", { cwd });
+}
+
+export async function setPreferredPythonInterpreter(
+  rootCwd: string,
+  scopedCwd: string,
+  interpreterPath: string,
+): Promise<void> {
+  return invoke<void>("set_preferred_python_interpreter_cmd", {
+    rootCwd,
+    scopedCwd,
+    interpreterPath,
+  });
+}
+
+export async function rebuildPythonEnv(
+  cwd: string,
+  rootCwd?: string,
+): Promise<PythonEnvWarmupLog> {
+  return invoke<PythonEnvWarmupLog>("rebuild_python_env", { cwd, rootCwd });
 }
 
 // ── Terminal commands ──

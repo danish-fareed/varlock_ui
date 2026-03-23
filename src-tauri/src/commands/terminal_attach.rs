@@ -37,7 +37,16 @@ pub fn attach_to_process(pid: u32, cwd: String) -> Result<(), String> {
     {
         if which_exists("wt.exe") {
             Command::new("cmd")
-                .args(["/C", "start", "", "wt.exe", "-d", &cwd, "--title", &format!("Process PID {}", pid)])
+                .args([
+                    "/C",
+                    "start",
+                    "",
+                    "wt.exe",
+                    "-d",
+                    &cwd,
+                    "--title",
+                    &format!("Process PID {}", pid),
+                ])
                 .spawn()
                 .map_err(|e| format!("Failed to open Windows Terminal: {}", e))?;
             return Ok(());
@@ -102,7 +111,7 @@ pub fn open_in_editor(cwd: String, editor: String) -> Result<(), String> {
             .spawn()
             .map_err(|e| format!("Failed to open {} in {}: {}", cwd, editor, e))?;
     }
-    
+
     #[cfg(not(target_os = "windows"))]
     {
         Command::new(&editor)
@@ -110,7 +119,7 @@ pub fn open_in_editor(cwd: String, editor: String) -> Result<(), String> {
             .spawn()
             .map_err(|e| format!("Failed to open {} in {}: {}", cwd, editor, e))?;
     }
-    
+
     Ok(())
 }
 
@@ -143,7 +152,7 @@ pub fn open_in_explorer(cwd: String) -> Result<(), String> {
             .spawn()
             .map_err(|e| format!("Failed to open file manager: {}", e))?;
     }
-    
+
     Ok(())
 }
 
@@ -189,7 +198,13 @@ fn open_terminal_windows(cwd: &str) -> Result<(), String> {
 
     // Fallback to cmd.exe — quote cwd to prevent injection
     Command::new("cmd")
-        .args(["/C", "start", "cmd.exe", "/K", &format!("cd /d \"{}\"", cwd)])
+        .args([
+            "/C",
+            "start",
+            "cmd.exe",
+            "/K",
+            &format!("cd /d \"{}\"", cwd),
+        ])
         .spawn()
         .map_err(|e| format!("Failed to open cmd: {}", e))?;
 
@@ -249,7 +264,9 @@ fn run_in_terminal_windows(cwd: &str, command: &str) -> Result<(), String> {
 
     if which_exists("wt.exe") {
         Command::new("cmd")
-            .args(["/C", "start", "", "wt.exe", "-d", cwd, "cmd", "/K", &inner_cmd])
+            .args([
+                "/C", "start", "", "wt.exe", "-d", cwd, "cmd", "/K", &inner_cmd,
+            ])
             .spawn()
             .map_err(|e| format!("Failed to open Windows Terminal: {}", e))?;
         return Ok(());
@@ -258,9 +275,15 @@ fn run_in_terminal_windows(cwd: &str, command: &str) -> Result<(), String> {
     if which_exists("pwsh.exe") {
         Command::new("cmd")
             .args([
-                "/C", "start", "", "pwsh.exe",
-                "-NoExit", "-WorkingDirectory", cwd,
-                "-Command", command,
+                "/C",
+                "start",
+                "",
+                "pwsh.exe",
+                "-NoExit",
+                "-WorkingDirectory",
+                cwd,
+                "-Command",
+                command,
             ])
             .spawn()
             .map_err(|e| format!("Failed to open PowerShell: {}", e))?;
@@ -297,10 +320,24 @@ fn run_in_terminal_linux(cwd: &str, command: &str) -> Result<(), String> {
     let full_cmd = format!("cd '{}' && {} ; exec $SHELL", escaped_cwd, command);
     let terminals = [
         ("gnome-terminal", vec!["--", "bash", "-c", &full_cmd]),
-        ("konsole", vec!["--workdir", cwd, "-e", "bash", "-c", &full_cmd]),
-        ("xfce4-terminal", vec!["--working-directory", cwd, "-e", &format!("bash -c '{}'", full_cmd)]),
+        (
+            "konsole",
+            vec!["--workdir", cwd, "-e", "bash", "-c", &full_cmd],
+        ),
+        (
+            "xfce4-terminal",
+            vec![
+                "--working-directory",
+                cwd,
+                "-e",
+                &format!("bash -c '{}'", full_cmd),
+            ],
+        ),
         ("kitty", vec!["--directory", cwd, "bash", "-c", &full_cmd]),
-        ("alacritty", vec!["--working-directory", cwd, "-e", "bash", "-c", &full_cmd]),
+        (
+            "alacritty",
+            vec!["--working-directory", cwd, "-e", "bash", "-c", &full_cmd],
+        ),
     ];
 
     for (term, args) in &terminals {

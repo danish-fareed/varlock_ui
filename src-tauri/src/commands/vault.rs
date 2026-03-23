@@ -3,11 +3,11 @@
 //! Exposes vault operations to the frontend via Tauri's invoke handler.
 
 use crate::state::vault_state::VaultState;
-use crate::vault::{audit, crypto, resolver};
 use crate::vault::vault_db::VaultVariable;
+use crate::vault::{audit, crypto, resolver};
 use serde::{Deserialize, Serialize};
-use tauri::State;
 use std::collections::HashMap;
+use tauri::State;
 use zeroize::Zeroize;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -186,7 +186,10 @@ pub fn vault_get_all_variables(
     vault: State<'_, VaultState>,
 ) -> Result<Vec<VaultVariableWithProject>, String> {
     let dek = vault.require_dek()?;
-    let all = vault.db.get_all_variables(&dek).map_err(|e| e.to_string())?;
+    let all = vault
+        .db
+        .get_all_variables(&dek)
+        .map_err(|e| e.to_string())?;
     Ok(all
         .into_iter()
         .map(|(project_id, variable)| VaultVariableWithProject {
@@ -317,10 +320,7 @@ pub fn vault_get_variables_shared_with(
 
 /// Generate a cryptographic secret.
 #[tauri::command]
-pub fn vault_generate_secret(
-    secret_type: String,
-    length: Option<usize>,
-) -> String {
+pub fn vault_generate_secret(secret_type: String, length: Option<usize>) -> String {
     crypto::generate_secret(&secret_type, length)
 }
 

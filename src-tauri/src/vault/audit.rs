@@ -21,13 +21,27 @@ pub fn log_write(db: &VaultDb, project_id: &str, env: &str, key: &str) {
 /// Log a variable delete event.
 pub fn log_delete(db: &VaultDb, project_id: &str, env: &str, key: &str) {
     let hashed = VaultDb::key_hash(key);
-    let _ = db.log_access("delete", project_id, Some(env), Some(&hashed), "local", None);
+    let _ = db.log_access(
+        "delete",
+        project_id,
+        Some(env),
+        Some(&hashed),
+        "local",
+        None,
+    );
 }
 
 /// Log an environment import event.
 pub fn log_import(db: &VaultDb, project_id: &str, env: &str, count: usize) {
     let metadata = format!("{{\"count\":{}}}", count);
-    let _ = db.log_access("import", project_id, Some(env), None, "local", Some(&metadata));
+    let _ = db.log_access(
+        "import",
+        project_id,
+        Some(env),
+        None,
+        "local",
+        Some(&metadata),
+    );
 }
 
 /// Log an environment export/resolve event.
@@ -38,7 +52,14 @@ pub fn log_export(db: &VaultDb, project_id: &str, env: &str) {
 /// Log a secret generation event.
 pub fn log_generate(db: &VaultDb, project_id: &str, env: &str, key: &str) {
     let hashed = VaultDb::key_hash(key);
-    let _ = db.log_access("generate", project_id, Some(env), Some(&hashed), "local", None);
+    let _ = db.log_access(
+        "generate",
+        project_id,
+        Some(env),
+        Some(&hashed),
+        "local",
+        None,
+    );
 }
 
 /// Log a vault unlock event.

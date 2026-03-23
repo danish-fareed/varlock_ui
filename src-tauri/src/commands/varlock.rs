@@ -23,10 +23,7 @@ pub async fn install_varlock() -> Result<String, String> {
 /// Run `varlock load --format=json-full` and return the raw normalized result.
 /// Kept for backward compatibility; prefer `varlock_load_merged` for richer data.
 #[tauri::command]
-pub async fn varlock_load(
-    cwd: String,
-    env: Option<String>,
-) -> Result<VarlockLoadResult, String> {
+pub async fn varlock_load(cwd: String, env: Option<String>) -> Result<VarlockLoadResult, String> {
     cli::load(&cwd, env.as_deref()).await
 }
 
@@ -81,9 +78,7 @@ pub async fn varlock_scan(cwd: String) -> Result<VarlockScanResult, String> {
 /// and returns a preview including the generated .env.schema content.
 #[deprecated(note = "Use get_migration_preview")]
 #[tauri::command]
-pub async fn migration_plan(
-    cwd: String,
-) -> Result<migration::MigrationPreview, String> {
+pub async fn migration_plan(cwd: String) -> Result<migration::MigrationPreview, String> {
     migration::get_migration_preview(&cwd).map_err(|e| e.to_string())
 }
 

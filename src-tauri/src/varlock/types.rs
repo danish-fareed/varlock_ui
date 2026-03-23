@@ -150,10 +150,32 @@ pub struct VarlockLeak {
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase", tag = "event", content = "data")]
 pub enum ProcessEvent {
-    Stdout { data: String },
-    Stderr { data: String },
-    Exit { code: Option<i32> },
-    Error { message: String },
+    LaunchLog {
+        env_status: Option<String>,
+        interpreter_path: Option<String>,
+        lines: Vec<String>,
+    },
+    LaunchTimeline {
+        stage: String,
+        status: String,
+        detail: String,
+        runtime: Option<String>,
+    },
+    RunDetails {
+        plan_json: String,
+    },
+    Stdout {
+        data: String,
+    },
+    Stderr {
+        data: String,
+    },
+    Exit {
+        code: Option<i32>,
+    },
+    Error {
+        message: String,
+    },
 }
 
 /// Varlock installation status returned to the frontend.

@@ -224,9 +224,12 @@ export function Sidebar() {
 
 import type { RunningCommandInfo } from "@/lib/types";
 
+const EMPTY_LOGS: string[] = [];
+
 function RunningSection({ running }: { running: Record<string, RunningCommandInfo> }) {
   const runningEntries = Object.values(running).filter((r) => r.status === "running");
   const { activeProject } = useProjectStore();
+  const logBuffers = useCommandStore((s) => s.logBuffers);
 
   if (runningEntries.length === 0) return null;
 
@@ -243,7 +246,10 @@ function RunningSection({ running }: { running: Record<string, RunningCommandInf
           </span>
         </div>
         <div className="flex flex-col gap-0.5">
-          {runningEntries.map((entry) => (
+          {runningEntries.map((entry) => {
+            const logs = logBuffers[entry.commandId] ?? EMPTY_LOGS;
+            const lastLog = logs.length > 0 ? logs[logs.length - 1] : null;
+            return (
             <div
               key={entry.commandId}
               className="flex items-center gap-2 py-1 px-1.5 rounded-md hover:bg-success-light/30 transition-colors group cursor-default"
@@ -251,6 +257,14 @@ function RunningSection({ running }: { running: Record<string, RunningCommandInf
               <span className="text-[11px] text-text truncate flex-1">
                 {entry.commandId.split(":").pop() || entry.commandId}
               </span>
+              {lastLog ? (
+                <span
+                  className="text-[9px] text-success-dark/80 truncate max-w-[90px]"
+                  title={lastLog}
+                >
+                  {lastLog}
+                </span>
+              ) : null}
               <button
                 onClick={() => {
                   if (activeProject?.path) {
@@ -263,7 +277,8 @@ function RunningSection({ running }: { running: Record<string, RunningCommandInf
                 <Terminal size={9} strokeWidth={1} />
               </button>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
